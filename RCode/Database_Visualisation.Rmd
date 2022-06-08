@@ -1,0 +1,167 @@
+---
+title: "Visualising the RiX Database"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+This file documents summary statistics of the RiX database, and can be used to indicate data gaps in RiX.
+
+First, load the required libraries and source code:
+```{r}
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(summarytools)
+source("./GeneralFunctions.R")
+```
+
+Then load and wrangle the Survey123 database:
+```{r}
+rix<-xlsx::read.xlsx("~/Downloads/S123_c1aacc6dde7b4b4b8d43607c1417f283_EXCEL(4).xlsx",
+                     sheetName = "Official_RiX_DIIF_XData_Inv_0",as.data.frame = T)
+
+rix%<>%dplyr::select(ObjectID,
+                     user,
+                     In.English..please.provide.the.name.of.the.dataset,
+                     des_org_type,
+                     Please.provide.the.name.of.the.organisation.that.produced.the.dataset,
+                     Please.provide.the.website.URL.of.the.dataset,
+                     des_formattype_dataset,
+                     des_formatextension_dataset,
+                     Please.provide.the.year.when.the.data.was.published..please.also.provide.the.month.if.known.,
+                     des_cca_themes,
+                     des_cca_group,
+                     des_continent_spatial,
+                     concat_countries_spatial,
+                     des_final_countries_spatial,
+                     final_label_countries,
+                     des_resolution_spatial,
+                     des_res_spat,
+                     What.is.the.starting.year.of.the.data.,
+                     What.is.the.end.year.of.the.data..Please.also.provide.the.month.if.known.,
+                     Which.of.the.following.hazard.type.s..are.present.in.the.data.,
+                     Please.select.hazard.cluster.s..present.in.the.data,
+                     Please.select.specific.hazard.s..present.in.the.data,
+                     des_exposuretype,
+                     des_exposuresubtype,
+                     des_vultype,
+                     des_vulsubtype,
+                     des_cctype,
+                     des_ccsubtype,
+                     des_imptype,
+                     des_impsubtype,
+                     des_fin_sdg,
+                     des_fin_jiaf,
+                     EditDate,
+                     category,
+                     formduration)
+
+names(rix)<-c("id",
+              "user",
+              "dataset_name",
+              "org_type",
+              "org",
+              "url",
+              "format_type",
+              "format_ext",
+              "pub_yr",
+              "cca_themes",
+              "cca_groups",
+              "continent",
+              "iso3c",
+              "countries",
+              "country_label",
+              "spat_res_type",
+              "spat_res",
+              "start_yr",
+              "end_yr",
+              "haz_type",
+              "haz_subtype",
+              "haz_subsubtype",
+              "exp_type",
+              "exp_subtype",
+              "vul_type",
+              "vul_subtype",
+              "cc_type",
+              "cc_subtype",
+              "imp_type",
+              "imp_subtype",
+              "sdg",
+              "jiaf",
+              "submit_date",
+              "category",
+              "form_duration"
+              )
+
+rix%<>%lapply(function(x) {if (is.factor(x)) x<-as.character(x) ; return(x)})%>%as.data.frame(stringsAsFactors=F)
+```
+
+Let's have a look! Firstly, let's have a look at the organisation types:
+```{r}
+ggplot(rix)+geom_bar(aes(org_type,fill=org_type)) + ggtitle("RiX Organisation Type Bar Chart") +
+  scale_fill_discrete(name="Organisation Type")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+Now let's look at the different organisation names that we are using the most:
+```{r}
+tmp<-rix%>%group_by(org)%>%summarise(Frequency=length(org))%>%arrange(desc(Frequency))
+colnames(tmp)[1]<-"Organisation"
+tmp
+rm(tmp)
+```
+
+How about the year of publication?
+```{r}
+ggplot(rix)+geom_histogram(aes(AsYear(pub_yr)),fill="darkgreen",bins=30)
+```
+For the datasets that we are collecting, which continents are mostly covered so far?
+```{r}
+ggplot(rix)+geom_bar(aes(continent,fill=continent))+ ggtitle("RiX Continents Bar Chart") +
+  scale_fill_discrete(name="Continents")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+For the datasets that we are collecting, are they global, regional, multiple or single countries?
+```{r}
+ggplot(rix)+geom_bar(aes(country_label,fill=country_label))+ ggtitle("RiX Country Coverage Groups Bar Chart") +
+  scale_fill_discrete(name="Coverage Type")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+How about the categories that the datasets span?
+```{r}
+ggplot(rix)+geom_bar(aes(category,fill=category)) + ggtitle("RiX Data Categories Bar Chart") +
+  scale_fill_discrete(name="Category")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+How about the 13 SDG risk areas?
+```{r}
+ggplot(rix)+geom_bar(aes(sdg,fill=sdg)) + ggtitle("RiX 13 SDG Risk Areas Bar Chart") +
+  scale_fill_discrete(name="SDG Risk Area")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+How about the JIAF themes?
+```{r}
+ggplot(rix)+geom_bar(aes(jiaf,fill=jiaf)) + ggtitle("RiX JIAF Themes Bar Chart") +
+  scale_fill_discrete(name="JIAF Themes")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+
+How long does it take to complete the form (in minutes), including having to resubmit?
+```{r}
+ggplot(filter(rix,form_duration>0))+geom_histogram(aes(form_duration),fill="darkorange3")+
+  scale_x_log10() + xlab("Minutes") + ylab("Count") + ggtitle("Duration to Complete DIIF")+
+  theme(plot.title=element_text(hjust=0.5))
+```
+
+
+
+<!-- Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*. -->
+
+<!-- When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file). -->
+
+<!-- The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed. -->
