@@ -30,9 +30,9 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 }
 
 # Extract boundaries file (1st admin level)
-ADM1<-as(sf::st_read("./RiX_Map/UNmap0_shp/BNDA_A1.shp"),"Spatial")
+ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
 ADM1%<>%filterADM(iso="SSD")
-ADM2<-as(sf::st_read("./RiX_Map/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
 ADM2%<>%filterADM(iso="SSD")
 
 
