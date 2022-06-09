@@ -3,21 +3,25 @@ title: "Visualising the RiX Database"
 output:
   pdf_document: default
   html_notebook: default
+  # code_folding: "hide"
+  # extra_dependencies: ["flafter"]
 ---
 This file documents summary statistics of the RiX database, and can be used to indicate data gaps in RiX.
 
 First, load the required libraries and source code:
-```{r}
+```{r, include=FALSE, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
 library(summarytools)
 source("./GeneralFunctions.R")
-```
 
+# knitr::opts_chunk$set(echo=FALSE)
+
+```
 Then load and wrangle the Survey123 database:
-```{r}
-rix<-xlsx::read.xlsx("~/Downloads/S123_c1aacc6dde7b4b4b8d43607c1417f283_EXCEL(4).xlsx",
+```{r, include=FALSE, echo=FALSE, message=FALSE}
+rix<-xlsx::read.xlsx("~/Downloads/S123_c1aacc6dde7b4b4b8d43607c1417f283_EXCEL(5).xlsx",
                      sheetName = "Official_RiX_DIIF_XData_Inv_0",as.data.frame = T)
 
 rix%<>%dplyr::select(ObjectID,
@@ -29,7 +33,9 @@ rix%<>%dplyr::select(ObjectID,
                      des_formattype_dataset,
                      des_formatextension_dataset,
                      Please.provide.the.year.when.the.data.was.published..please.also.provide.the.month.if.known.,
+                     Please.select.the.different.themes.that.this.dataset.s..could.be.used.to.analyse,
                      des_cca_themes,
+                     cca_group_tag,
                      des_cca_group,
                      des_continent_spatial,
                      concat_countries_spatial,
@@ -50,7 +56,9 @@ rix%<>%dplyr::select(ObjectID,
                      des_ccsubtype,
                      des_imptype,
                      des_impsubtype,
+                     fin_sdg,
                      des_fin_sdg,
+                     fin_jiaf,
                      des_fin_jiaf,
                      EditDate,
                      category,
@@ -65,7 +73,9 @@ names(rix)<-c("id",
               "format_type",
               "format_ext",
               "pub_yr",
+              "cca_tags",
               "cca_themes",
+              "cca_group_tags",
               "cca_groups",
               "continent",
               "iso3c",
@@ -86,39 +96,62 @@ names(rix)<-c("id",
               "cc_subtype",
               "imp_type",
               "imp_subtype",
+              "sdg_tag",
               "sdg",
+              "jiaf_tag",
               "jiaf",
               "submit_date",
               "category",
               "form_duration"
               )
 
+# rix$pub_yr%<>%openxlsx::convertToDate()
+# rix$start_yr%<>%openxlsx::convertToDate()
+
 rix%<>%lapply(function(x) {if (is.factor(x)) x<-as.character(x) ; return(x)})%>%as.data.frame(stringsAsFactors=F)
 ```
+Do we need to filter for one country only?
+```{r}
+iso<-"SSD"
+if(!is.na(iso)) rix%<>%filter(iso3c==iso)
+```
+
 
 Let's have a look! Firstly, let's have a look at the organisation types:
 ```{r}
+
 ggplot(rix)+geom_bar(aes(org_type,fill=org_type)) + ggtitle("RiX Organisation Type Bar Chart") +
-  scale_fill_discrete(name="Organisation Type")+
+  scale_fill_discrete(name="Organisation Type")+xlab("Organisation Type")+ylab("Count")+
   theme(axis.text.x=element_blank(),
         plot.title=element_text(hjust=0.5))
+
 ```
 Now let's look at the different organisation names that we are using the most:
 ```{r}
 tmp<-rix%>%group_by(org)%>%summarise(Frequency=length(org))%>%arrange(desc(Frequency))
 colnames(tmp)[1]<-"Organisation"
-tmp
+tmp$Rank<-1:nrow(tmp)
+tmp[,c(3,1,2)]
 rm(tmp)
 ```
 
 How about the year of publication?
 ```{r}
-ggplot(rix)+geom_histogram(aes(AsYear(pub_yr)),fill="darkgreen",bins=30)
+ggplot(rix)+geom_histogram(aes(AsYear(pub_yr)),fill="darkgreen",bins=30) + xlab("Publication Year")
 ```
-For the datasets that we are collecting, which continents are mostly covered so far?
+What kind of data do we have?
 ```{r}
-ggplot(rix)+geom_bar(aes(continent,fill=continent))+ ggtitle("RiX Continents Bar Chart") +
-  scale_fill_discrete(name="Continents")+
+ggplot(rix)+geom_bar(aes(histosplitter(spat_res_type,T),fill=histosplitter(spat_res_type,T)))+ ggtitle("Data Types Bar Chart") +
+  scale_fill_discrete(name="Dataset/Information Format")+
+  theme(axis.text.x=element_blank(),
+        plot.title=element_text(hjust=0.5))
+```
+
+
+For the datasets that we are collecting, which data country coverage levels are the most frequent?
+```{r}
+ggplot(rix)+geom_bar(aes(country_label,fill=country_label))+ ggtitle("RiX Continents Bar Chart") +
+  scale_fill_discrete(name="Dataset Coverage")+
   theme(axis.text.x=element_blank(),
         plot.title=element_text(hjust=0.5))
 ```
@@ -138,7 +171,7 @@ ggplot(rix)+geom_bar(aes(category,fill=category)) + ggtitle("RiX Data Categories
 ```
 How about the 13 SDG risk areas?
 ```{r}
-ggplot(rix)+geom_bar(aes(sdg,fill=sdg)) + ggtitle("RiX 13 SDG Risk Areas Bar Chart") +
+ggplot(rix)+geom_bar(aes(sdg_tags,fill=sdg_tags)) + ggtitle("RiX 13 SDG Risk Areas Bar Chart") +
   scale_fill_discrete(name="SDG Risk Area")+
   theme(axis.text.x=element_blank(),
         plot.title=element_text(hjust=0.5))
@@ -157,7 +190,29 @@ ggplot(filter(rix,form_duration>0))+geom_histogram(aes(form_duration),fill="dark
   scale_x_log10() + xlab("Minutes") + ylab("Count") + ggtitle("Duration to Complete DIIF")+
   theme(plot.title=element_text(hjust=0.5))
 ```
+Here we explore some commonly available data covering South Sudan. Let's look first at EM-DAT
 
+```{r}
+emdat<-xlsx::read.xlsx("~/Downloads/emdat_public_2022_06_08_query_uid-1nPHdz.xlsx",
+                     sheetName = "emdat data",as.data.frame = T, startRow = 7)
+```
+Now let's plot the different hazards experienced in South Sudan
+```{r}
+ggplot(emdat)+geom_bar(aes(Disaster.Type,fill=Disaster.Group))
+```
+How about number of events in time?
+```{r}
+ggplot(emdat)+geom_histogram(aes(Start.Year),fill="darkred")
+```
+How about the number of deaths, per hazard event, per year?
+```{r}
+ggplot(emdat)+geom_point(aes(Start.Year,as.numeric(Total.Deaths),colour=Disaster.Type,size=as.numeric(Total.Deaths)))
+```
+How about a boxplot of the number of deaths and homeless per disaster type?
+```{r}
+ggplot(emdat)+geom_boxplot(aes(Disaster.Type,as.numeric(Total.Deaths),fill=Disaster.Group))
+ggplot(emdat)+geom_boxplot(aes(Disaster.Type,as.numeric(No.Affected),fill=Disaster.Group))
+```
 
 
 <!-- Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*. -->

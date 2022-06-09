@@ -114,6 +114,12 @@ CheckBbox<-function(bbox,correct=TRUE){
   return(bbox)
 }
 
+histosplitter<-function(vals,rmblank=F){
+  vals%<>%strsplit(split = ",",fixed = T)%>%unlist()
+  if(rmblank) vals%<>%str_remove_all(" ")
+  return(vals)
+}
+
 areaBbox<-function(bbox){
   s1<-cbind(lon=c(bbox[1],bbox[3],bbox[1],bbox[3]),lat=c(bbox[2],bbox[2],bbox[4],bbox[4]))
   sp1 <- spPolygons(s1, crs="+proj=longlat +datum=WGS84")
