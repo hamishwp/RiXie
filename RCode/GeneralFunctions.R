@@ -311,6 +311,28 @@ countriesbbox<-function(iso3){
   
 }
 
+inPoly<-function(poly,pop,iii=1,sumzy=T){
+  
+  insidepoly<-rep(FALSE,nrow(pop))
+  
+  for (i in 1:length(poly@Polygons)){
+    insidepoly<- insidepoly | sp::point.in.polygon(pop@coords[,1],
+                                                   pop@coords[,2],
+                                                   poly@Polygons[[i]]@coords[,1],
+                                                   poly@Polygons[[i]]@coords[,2])>0
+  }
+  
+  if(sumzy) return(sum(pop@data[insidepoly,iii]))
+  return(insidepoly)
+  
+}
+
+Grid2ADM<-function(pop,ADM){
+  
+  sapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop))
+  
+}
+
 PlotDisaster<-function(pop,dfpoly,bbox=NULL,map=FALSE,ncity=1,namer="Disaster",filer="./"){
   
   if(is.null(bbox)) bbox<-as.numeric(c(min(rownames(pop)),min(colnames(pop)),max(rownames(pop)),max(colnames(pop))))

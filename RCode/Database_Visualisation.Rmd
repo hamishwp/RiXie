@@ -1,24 +1,140 @@
 ---
 title: "Visualising the RiX Database"
 output:
-  pdf_document: default
+  html_document:
+    df_print: paged
   html_notebook: default
-  # code_folding: "hide"
-  # extra_dependencies: ["flafter"]
+  pdf_document: default
 ---
-This file documents summary statistics of the RiX database, and can be used to indicate data gaps in RiX.
-
-First, load the required libraries and source code:
+This file documents summary statistics of the RiX database, and can be used to indicate data gaps in RiX. Firstly, do we want to focus on one specific country? If not, leave as NA:
+```{r}
+# iso<-NA
+iso<-"SSD"
+```
+Now load the required libraries and source code:
 ```{r, include=FALSE, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
 library(summarytools)
+library(leaflet)
+library(sf)
+library(ggmap)
 source("./GeneralFunctions.R")
 
 # knitr::opts_chunk$set(echo=FALSE)
 
 ```
+Let's check out some basics on the country specified:
+```{r}
+# First load the administrative boundaries:
+# SSD<-readRDS("../Data/SSD_ADM.Rdata")
+# pop<-as(raster::raster("../Data/ssd_ppp_2020_1km_Aggregated_UNadj.tif"),"SpatialPixelsDataFrame")
+
+# Aggregate population to admin 1 boundary level
+# SSD$ADM1@data$population<-Grid2ADM(pop,SSD$ADM1)
+# Aggregate population to admin 2 boundary level
+# SSD$ADM2@data$population<-Grid2ADM(pop,SSD$ADM2)
+
+# adm1er<-SSD$ADM1
+# adm1er@data<-dplyr::select(adm1er@data,population)
+
+# list_GDACS<-GetGDACS_API(syear = 2016,fyear = 2022)
+
+# dfGDACS<-FilterGDACS(list_GDACS = list_GDACS,iso3c = "SSD")
+
+st_layers("~/Downloads/hzd-ssd-mh.gpkg")
+
+hazd <- st_read("~/Downloads/hzd-ssd-mh.gpkg",
+                    layer = "lss_ssd_fl_adm2")
+
+hazd%<>%dplyr::select(adm1_pcode,
+                      pop_2019,
+                      under18,
+                      healthsite_count,
+                      fl_pop_rp5,
+                      fl_pop_rp20,
+                      fl_pop_rp100,
+                      fl_pop_rp250,
+                      fl_buildings_rp100)
+# hazd$GrossNatInc%<>%exp()
+
+SHDI<-xlsx::read.xlsx("~/Downloads/SHDI-Database_SSD.xlsx",sheetName = "SSD")
+SHDI%<>%filter(year==max(SHDI$year) & level=="Subnat")%>%dplyr::select(c(4,8:ncol(SHDI)-1))
+colnames(SHDI)[2:ncol(SHDI)]<-c("SHDI","HealthI","LivingStandI","EducationI","LifeExp","logGrossNatInc","ExpectedSchoolYrs","MeanSchoolYrs")
+if(length(unique(SHDI$GDLCODE))!=length(unique(hazd$adm1_pcode))) stop("Unequal number of p-codes between SHDI and GFDRR-multihazard Risk")
+warning("Assuming that order of p-codes is same between SHDI and GFDRR-multihazard Risk")
+SHDI$adm1_pcode<-NA
+for(i in 1:length(unique(SHDI$GDLCODE))) {
+  SHDI$adm1_pcode[SHDI$GDLCODE==unique(SHDI$GDLCODE)[i]]<-as.character(unique(hazd$adm1_pcode)[i])
+}
+hazd%<>%merge(SHDI,by="adm1_pcode")
+
+# hazd%<>%as("Spatial")
+
+bbox<-unname(st_bbox(hazd$geometry))
+mad_map <- get_stamenmap(bbox,source = "stamen",zoom=6) # ,maptype = "terrain-background"
+q<-ggmap(mad_map,base_layer = ggplot(hazd))+ xlab("Longitude") + ylab("Latitude")
+
+
+# dfGDACS<-data.frame()
+#   for (i in 1:length(list_GDACS)){
+#     tmper<-list_GDACS[[i]]
+#     if(tmper$properties$iso3!=iso) next
+#     dfGDACS<-rb
+#   }
+# leaflet(hazd) %>% addTiles() %>%
+#   addPolygons(data=hazd,fillColor =hazd$pop_2019)%>%
+#     # opacity = 1.0, fillOpacity = 0.5,
+#     # fillColor = ~colorQuantile("YlOrRd", ROMNAM)(ROMNAM),
+#     # highlightOptions = highlightOptions(color = "white", weight = 2,
+#       # bringToFront = TRUE) %>%
+#   setView(31.3, 6.88, zoom = 5) %>%
+#   addPopups(
+#     31.3, 6.88,
+#     'Total Population (2020) = 11,193,729 <br>
+#     Life Expectancy at Birth = 58 <br>
+#     GDP per capita (USD-2022) = $1,119.7 <br>
+#     Unemployment = 13.9%'
+#   )
+# width & height of world is 256.2^zoomlevel
+
+```
+Plot data that provides a country overview, by administrative region. Firstly, total population and population under 18:
+```{r}
+p1<-q+geom_sf(data=hazd,aes(fill=pop_2019),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Tot. Pop.")
+p2<-q+geom_sf(data=hazd,aes(fill=under18),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "No. Child. (<18)")
+
+gridExtra::grid.arrange(p1,p2,nrow=1)
+```
+Look at the population exposed to flood hazard frequency, for different flood return periods:
+```{r}
+p1<-q+geom_sf(data=hazd,aes(fill=fl_pop_rp5),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Pop. Exp. 5yr Flood")
+p2<-q+geom_sf(data=hazd,aes(fill=fl_pop_rp20),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Pop. Exp. 20yr Flood")
+p3<-q+geom_sf(data=hazd,aes(fill=fl_pop_rp100),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Pop. Exp. 100yr Flood")
+p4<-q+geom_sf(data=hazd,aes(fill=fl_pop_rp250),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Pop. Exp. 250yr Flood")
+
+gridExtra::grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+Plot the sub-national Human Development Index (HDI), along with it's constituent indices:
+```{r}
+p1<-q+geom_sf(data=hazd,aes(fill=SHDI),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "HDI")
+p2<-q+geom_sf(data=hazd,aes(fill=HealthI),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Health Ind.")
+p3<-q+geom_sf(data=hazd,aes(fill=LivingStandI),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Living Standard Ind.")
+p4<-q+geom_sf(data=hazd,aes(fill=EducationI),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Education Ind")
+
+gridExtra::grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+Finally, raw information that was used to build the HDI:
+```{r}
+p1<-q+geom_sf(data=hazd,aes(fill=LifeExp),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Life Exp.")
+p2<-q+geom_sf(data=hazd,aes(fill=logGrossNatInc),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "GNI (log)")
+p3<-q+geom_sf(data=hazd,aes(fill=MeanSchoolYrs),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Exp. No. School Yrs")
+p4<-q+geom_sf(data=hazd,aes(fill=healthsite_count),alpha=0.5)+scale_fill_viridis_c()+labs(fill = "Num. Healthsites")
+
+gridExtra::grid.arrange(p1,p2,p3,p4,nrow=2)
+```
+
 Then load and wrangle the Survey123 database:
 ```{r, include=FALSE, echo=FALSE, message=FALSE}
 rix<-xlsx::read.xlsx("~/Downloads/S123_c1aacc6dde7b4b4b8d43607c1417f283_EXCEL(5).xlsx",
@@ -35,7 +151,7 @@ rix%<>%dplyr::select(ObjectID,
                      Please.provide.the.year.when.the.data.was.published..please.also.provide.the.month.if.known.,
                      Please.select.the.different.themes.that.this.dataset.s..could.be.used.to.analyse,
                      des_cca_themes,
-                     cca_group_tag,
+                     cca_group,
                      des_cca_group,
                      des_continent_spatial,
                      concat_countries_spatial,
@@ -75,7 +191,7 @@ names(rix)<-c("id",
               "pub_yr",
               "cca_tags",
               "cca_themes",
-              "cca_group_tags",
+              "cca_group_tag",
               "cca_groups",
               "continent",
               "iso3c",
@@ -112,7 +228,6 @@ rix%<>%lapply(function(x) {if (is.factor(x)) x<-as.character(x) ; return(x)})%>%
 ```
 Do we need to filter for one country only?
 ```{r}
-iso<-"SSD"
 if(!is.na(iso)) rix%<>%filter(iso3c==iso)
 ```
 
@@ -171,7 +286,7 @@ ggplot(rix)+geom_bar(aes(category,fill=category)) + ggtitle("RiX Data Categories
 ```
 How about the 13 SDG risk areas?
 ```{r}
-ggplot(rix)+geom_bar(aes(sdg_tags,fill=sdg_tags)) + ggtitle("RiX 13 SDG Risk Areas Bar Chart") +
+ggplot(rix)+geom_bar(aes(sdg_tag,fill=sdg_tag)) + ggtitle("RiX 13 SDG Risk Areas Bar Chart") +
   scale_fill_discrete(name="SDG Risk Area")+
   theme(axis.text.x=element_blank(),
         plot.title=element_text(hjust=0.5))
