@@ -1,4 +1,3 @@
-library(countrycode)
 library(raster)
 library(geosphere)
 
@@ -242,6 +241,20 @@ asSPDF<-function(obj,namez=NULL,crs="WGS84"){
   
 }
 
+saveSFasTif<-function(SFobj,filename=NULL){
+  
+  SFobj$ISO3C<-NULL
+  class(SFobj)<-"SpatialPixelsDataFrame"
+  SFobj<-brick(SFobj)
+  
+  if(!is.null(filename)) {
+    x <- rast(SFobj)
+    terra::writeRaster(x,filename=filename,overwrite=TRUE)
+  }
+  return(SFobj)
+  
+}
+
 extractnumbers<-function(str){
   return(as.numeric(unlist(regmatches(str,gregexpr("(?>-)*[[:digit:]]+\\.*[[:digit:]]*",str, perl=TRUE)))))
 }
@@ -311,7 +324,7 @@ countriesbbox<-function(iso3){
   
 }
 
-inPoly<-function(poly,pop,iii=1,sumzy=T){
+inPoly<-function(poly,pop,iii=1,sumFn=NULL){
   
   insidepoly<-rep(FALSE,nrow(pop))
   
@@ -322,14 +335,38 @@ inPoly<-function(poly,pop,iii=1,sumzy=T){
                                                    poly@Polygons[[i]]@coords[,2])>0
   }
   
-  if(sumzy) return(sum(pop@data[insidepoly,iii]))
+  if(!is.null(sumFn)) return(match.fun(sumFn)(pop@data[insidepoly,iii],na.rm=T))
   return(insidepoly)
   
 }
 
-Grid2ADM<-function(pop,ADM){
+Grid2ADM<-function(pop,ADM,sumFn=NULL){
   
-  sapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop))
+  sapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop,sumFn=sumFn))
+  
+}
+
+Genx0y0<-function(SFobj){
+  
+  xo<-SFobj@coords[1:SFobj@grid@cells.dim[1],1]
+  yo<-SFobj@coords[1:SFobj@grid@cells.dim[2]*SFobj@grid@cells.dim[1]-SFobj@grid@cells.dim[1]+1,2]
+  
+  return(list(xo=xo,yo=yo))
+}
+
+Interp2GRID<-function(GridSF,IntData){
+  
+  # K-Nearest neighbour approach, applying K=1
+  return(IntData%>%raster%>%raster::extract(GridSF@coords))
+  
+  # IntData%<>%as.data.frame()
+  # coords<-Genx0y0(GridSF)
+  # layer<-with(IntData,akima::interp(x=x,
+  #                                   y=y,
+  #                                   z=names(IntData)[1],
+  #                                   xo=coords$xo,yo=coords$yo,
+  #                                   linear=F,extrap = T))
+  # return(c(layer$z))
   
 }
 
