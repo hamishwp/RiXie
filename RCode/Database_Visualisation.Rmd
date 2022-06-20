@@ -77,6 +77,50 @@ mad_map <- get_stamenmap(bbox,source = "stamen",zoom=6) # ,maptype = "terrain-ba
 q<-ggmap(mad_map,base_layer = ggplot(hazd))+ xlab("Longitude") + ylab("Latitude")
 
 
+dbase<-xlsx::read.xlsx("~/Downloads/Dataset_Validation.xlsx",sheetName = "Official_RiX_DIIF_XData_Inv_0")
+choices<-xlsx::read.xlsx("~/Downloads/RiX-DIIF.xlsx",sheetName = "choices")
+
+CCAfreq<-data.frame(table(unlist(str_split(dbase$Please.select.the.different.themes.that.this.dataset.s..could.be.used.to.analyse,","))))
+names(CCAfreq)=c("CodeName","Freq")
+CCA<-cbind(arrange(choices[which(choices$name%in%unique(unlist(str_split(dbase$Please.select.the.different.themes.that.this.dataset.s..could.be.used.to.analyse,",")))),c(1:3,7)],name),CCAfreq)
+CCAtemplate<-xlsx::read.xlsx("../Data/CompiledFreqTables.xlsx",sheetName = "Sheet1")
+
+SDGfreq<-data.frame(table(unlist(str_split(unlist(str_split(dbase$fin_sdg,",")),";"))))
+names(SDGfreq)=c("name","Freq")
+xlsx::write.xlsx(merge(choices[,1:3],SDGfreq,by="name"),append = T,
+                 "../Data/FreqTables.xlsx", sheetName = "SDG")
+
+JIAFfreq<-data.frame(table(unlist(str_split(unlist(str_split(dbase$fin_jiaf,",")),";"))))
+names(JIAFfreq)=c("name","Freq")
+xlsx::write.xlsx(merge(choices[,1:3],JIAFfreq,by="name"),append = T,
+                 "../Data/FreqTables.xlsx", sheetName = "JIAF")
+
+
+# Correct names
+names(dbase)[6]<-"org_name"
+dbase$org_name[dbase$org_name=="World Bank "]<-"World Bank"
+dbase$org_name[dbase$org_name=="NASA Socioeconomic Data and Appplications Center"]<-"NASA Socioeconomic Data and Applications Center"
+dbase$org_name[dbase$org_name=="IDMC"]<-"Internal Displacement Monitoring Centre (IDMC)"
+dbase$org_name[dbase$org_name=="World Intergrated Trade Solution "]<-"World Intergrated Trade Solution"
+dbase$org_name[dbase$org_name=="World Trade Intergrated Solution"]<-"World Intergrated Trade Solution"
+dbase$org_name[dbase$org_name=="World Trade Intergrated Solution "]<-"World Intergrated Trade Solution"
+dbase$org_name[dbase$org_name=="World Intergrated Trade Solutions"]<-"World Intergrated Trade Solution"
+dbase$org_name[dbase$org_name=="Famine and Early Warning Systems Network (FEWSNET)"]<-"Famine Early Warning Systems Network (FEWSNET)"
+dbase$org_name[dbase$org_name=="GEM Foundation (OpenQuake)"]<-"Global Earthquake Model (GEM)"
+dbase$org_name[dbase$org_name=="Global Earthquake Model"]<-"Global Earthquake Model (GEM)"
+dbase$org_name[dbase$org_name=="Global Facility for Disaster Reduction and Recovery "]<-"Global Facility for Disaster Reduction and Recovery (GFDRR)"
+dbase$org_name[dbase$org_name=="NASA"]<-"National Aeronautics and Space Administration (NASA)"
+dbase$org_name[dbase$org_name==" National Aeronautics and Space Administration (NASA)"]<-"National Aeronautics and Space Administration (NASA)"
+dbase$org_name[dbase$org_name=="John Hopkins University & Medicine"]<-"John Hopkins Center for Security Health"
+dbase$org_name[dbase$org_name=="European Commission "]<-"European Commission"
+dbase$org_name[dbase$org_name=="European Commission Copernicus Programme"]<-"European Commission"
+dbase$org_name[dbase$org_name=="Global Forest Watch - World Resources Institute (WRI)"]<-"World Resources Institute (WRI)"
+dbase$org_name[dbase$org_name=="Global Forest Watch"]<-"World Resources Institute (WRI)"
+dbase$org_name[dbase$org_name=="IMF"]<-"International Monetary Fund (IMF)"
+org_tot<-data.frame(table(dbase$org_name))%>%arrange(desc(Freq))
+xlsx::write.xlsx(org_tot,"../Data/OrgNameFreqTables.xlsx", sheetName = "Sheet1")
+
+
 # dfGDACS<-data.frame()
 #   for (i in 1:length(list_GDACS)){
 #     tmper<-list_GDACS[[i]]
