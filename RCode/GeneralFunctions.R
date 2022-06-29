@@ -1,6 +1,12 @@
 library(raster)
 library(geosphere)
-
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(summarytools)
+library(leaflet)
+library(sf)
+library(ggmap)
 library(rworldmap)
 library(rworldxtra)
 library(sp)

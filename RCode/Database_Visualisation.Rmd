@@ -11,22 +11,9 @@ This file documents summary statistics of the RiX database, and can be used to i
 # iso<-NA
 iso<-"SSD"
 ```
-Now load the required libraries and source code:
-```{r, include=FALSE, echo=FALSE, message=FALSE}
-library(tidyverse)
-library(magrittr)
-library(ggplot2)
-library(summarytools)
-library(leaflet)
-library(sf)
-library(ggmap)
-source("./GeneralFunctions.R")
-
-# knitr::opts_chunk$set(echo=FALSE)
-
-```
 Let's check out some basics on the country specified:
 ```{r}
+source("./GeneralFunctions.R")
 # First load the administrative boundaries:
 # SSD<-readRDS("../Data/SSD_ADM.Rdata")
 # pop<-as(raster::raster("../Data/ssd_ppp_2020_1km_Aggregated_UNadj.tif"),"SpatialPixelsDataFrame")
@@ -49,6 +36,9 @@ hazd <- st_read("~/Downloads/hzd-ssd-mh.gpkg",
                     layer = "lss_ssd_fl_adm2")
 
 hazd%<>%dplyr::select(adm1_pcode,
+                      adm1_en,
+                      adm2_pcode,
+                      adm2_en,
                       pop_2019,
                       under18,
                       healthsite_count,
@@ -74,7 +64,7 @@ e <- as(extent(bbox[c(1,3,2,4)]), 'SpatialPolygons')
 crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
 
 # Agricultural Stress Index
-shaz <- st_read("./Data/Hazard/hzd-ssd-dr-asi.gpkg",
+shaz <- st_read("../Data/Hazard/hzd-ssd-dr-asi.gpkg",
                                   layer = "hzd_ssd_dr_asi_30years_75th")
 ASI<-data.frame(adm1_pcode=unique(shaz$adm1_pcode),
                 ASI=sapply(unique(shaz$adm1_pcode),function(id) unique(shaz$asi[shaz$adm1_pcode==id])))
