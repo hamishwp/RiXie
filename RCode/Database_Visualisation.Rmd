@@ -59,7 +59,7 @@ hazd%<>%dplyr::select(adm1_pcode,
                       fl_buildings_rp100)
 # hazd$GrossNatInc%<>%exp()
 
-SHDI<-xlsx::read.xlsx("~/Downloads/SHDI-Database_SSD.xlsx",sheetName = "SSD")
+SHDI<-xlsx::read.xlsx("../Data/AdminBoundaries/SHDI-Database_SSD.xl",sheetName = "SSD")
 SHDI%<>%filter(year==max(SHDI$year) & level=="Subnat")%>%dplyr::select(c(4,8:ncol(SHDI)-1))
 colnames(SHDI)[2:ncol(SHDI)]<-c("SHDI","HealthI","LivingStandI","EducationI","LifeExp","logGrossNatInc","ExpectedSchoolYrs","MeanSchoolYrs")
 if(length(unique(SHDI$GDLCODE))!=length(unique(hazd$adm1_pcode))) stop("Unequal number of p-codes between SHDI and GFDRR-multihazard Risk")
