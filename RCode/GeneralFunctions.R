@@ -330,24 +330,137 @@ countriesbbox<-function(iso3){
   
 }
 
-inPoly<-function(poly,pop,iii=1,sumFn=NULL){
+# Find which coordinates of an S4 spatial object lie inside (or on the boundary of) a spatial polygon file
+inPoly<-function(poly,pop,iii=1,sumFn="sum"){
+  
+  if(any(class(pop)=="SpatialPointsDataFrame") | any(class(pop)=="SpatialPixelsDataFrame")){
+    coords<-pop@coords
+    data<-pop@data
+  } else {
+    coords<-as.data.frame(pop[,c("LONGITUDE","LATITUDE")])
+    data<-as.data.frame(pop)
+  }
   
   insidepoly<-rep(FALSE,nrow(pop))
   
   for (i in 1:length(poly@Polygons)){
-    insidepoly<- insidepoly | sp::point.in.polygon(pop@coords[,1],
-                                                   pop@coords[,2],
-                                                   poly@Polygons[[i]]@coords[,1],
-                                                   poly@Polygons[[i]]@coords[,2])>0
+    # Get rid of values outside the bounding box first
+    minipoly<-rep(FALSE,length(insidepoly))
+    indies<-coords[,1]>=min(poly@Polygons[[i]]@coords[,1]) &
+      coords[,1]<=max(poly@Polygons[[i]]@coords[,1]) &
+      coords[,2]>=min(poly@Polygons[[i]]@coords[,2]) &
+      coords[,2]<=max(poly@Polygons[[i]]@coords[,2])
+    # Now we only need to calculate a few points that lie inside the polygon!
+    minipoly[indies]<-sp::point.in.polygon(coords[indies,1],
+                                           coords[indies,2],
+                                           poly@Polygons[[i]]@coords[,1],
+                                           poly@Polygons[[i]]@coords[,2])>0
+    # Add to the total
+    insidepoly<- insidepoly | minipoly
   }
   
-  if(!is.null(sumFn)) return(match.fun(sumFn)(pop@data[insidepoly,iii],na.rm=T))
-  return(insidepoly)
-  
+  outer<-match.fun(sumFn)(data[insidepoly,iii],na.rm=T)
+  return(list(vals=outer,indies=insidepoly))
 }
+# Aggregate gridded data onto a polygon
+Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
+  outer<-mclapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop,index,sumFn=sumFn), mc.cores = ncores)
+  vals<-c(); indies<-rep(F,nrow(pop))
+  for(i in 1:length(outer)) {
+    vals%<>%c(outer[[i]]$vals)
+    indies<- indies | outer[[i]]$indie
+  }
+  if(!outsiders) return(vals)
+  # Add the values that were not found inside a polygon
+  if(any(class(pop)=="SpatialPointsDataFrame") | any(class(pop)=="SpatialPixelsDataFrame")){
+    coords<-pop@coords
+    data<-pop@data
+  } else {
+    coords<-as.data.frame(pop[,c("LONGITUDE","LATITUDE")])
+    data<-as.data.frame(pop)
+  }
+  warning(paste0(round(100*(1-match.fun(sumFn)(data[indies,index],na.rm=T)/match.fun(sumFn)(data[,index],na.rm=T)),digits = 2),"% of values that were not inside any polygon, adding them to nearest polygon now "))
+  # Now to catch the annoying values that weren't located inside any of the polygons!
+  # make a dataframe full of the coordinates of the polygons and indices of the corresponding polygon
+  polycoords<-extractPolyCoords(ADM)
+  mind<-0; vals_s<-vals
+  for(i in which(!indies)) {
+    # Find the closest polygon
+    disties<-abs(coords[i,1]-polycoords$LONGITUDE)*abs(coords[i,2]-polycoords$LATITUDE)
+    minnie<-which.min(disties)
+    mind%<>%max(disties[minnie])
+    vals[polycoords$i[minnie]]<-vals[polycoords$i[minnie]]+data[i,index]
+  }
+  warning(paste0("Maximum distance between values not inside polygon was = ",mind))
+  return(list(polyonly=vals_s,all=vals,mind=mind))
+}
+# 
+# Points2Grid<-function(confy,pop,agg){
+#  
+#     vapply(1:nrow(pop@coords),function(ind) {
+#       length(confy[which.min(c(abs(pop@coords[ind,1]-confy$LONGITUDE)*abs(pop@coords[ind,2]-confy$LATITUDE))),1])
+#     },numeric(1))
+#    
+# }
 
-Grid2ADM<-function(pop,ADM,sumFn=NULL){
-  as.integer(sapply(1:length(ADM@polygons), function(j) sum(pop@data[inPoly(ADM@polygons[[j]],pop,sumFn=sumFn),1],na.rm = T)))
+# pop is S4 spatial object, so gridded, arrayz is Spatial Points or a dataframe
+Points2Grid<-function(pop, arrayz, ncores=4, funcy="nrow",columner=1,namer="Pop", napop=F){
+  
+  funcy<-match.fun(funcy)
+  
+  grid<-as.data.frame(pop@grid)
+  pop@data$array<-NA
+  
+  if(any(class(arrayz)=="SpatialPointsDataFrame")){
+    arrayz<-data.frame(LONGITUDE=arrayz@coords[,1],
+                       LATITUDE=arrayz@coords[,2],
+                       POPULATION=arrayz@data[,columner]) 
+  }
+  
+  # Create a function that takes in input i in 1:ncores that reduces FBpop (rename as tmp) as it goes
+  # and returns a list of N/ncores values
+  parAGG<-function(kk){
+    
+    if(napop) ijs<-which(!is.na(pop@data[,1])) else ijs<-1:nrow(pop@data)
+    iiis<-floor((kk-1L)*length(ijs)/ncores+1L):floor((kk)*length(ijs)/ncores)
+    if(kk==ncores) iiis<-floor((kk-1L)*length(ijs)/ncores+1L):length(ijs)
+    ijs<-ijs[iiis]
+    
+    inds<-arrayz$LONGITUDE< (min(pop@coords[ijs,1]) - grid$cellsize[1])&
+      arrayz$LONGITUDE>=(max(pop@coords[ijs,1]) + grid$cellsize[1])&
+      arrayz$LATITUDE< (min(pop@coords[ijs,2]) - grid$cellsize[2])&
+      arrayz$LATITUDE>=(max(pop@coords[ijs,2]) + grid$cellsize[2])
+    
+    tmp<-arrayz[!inds,]
+    
+    output<-rep(NA,length(ijs))
+    i<-1
+    for (z in ijs){
+      
+      inds<-tmp$LONGITUDE< (pop@coords[z,1] + grid$cellsize[1])&
+        tmp$LONGITUDE>=(pop@coords[z,1] - grid$cellsize[1])&
+        tmp$LATITUDE< (pop@coords[z,2] + grid$cellsize[2])&
+        tmp$LATITUDE>=(pop@coords[z,2] - grid$cellsize[2])
+      output[i]<-funcy(tmp[inds,columner])
+      
+      tmp<-tmp[!inds,]
+      i<-i+1
+      
+    }
+    
+    return(output)
+    
+  }
+  
+  if(napop) indies<-which(!is.na(pop@data[,1])) else indies<-1:nrow(pop@data)
+  
+  if(ncores>1) {pop@data$array[indies]<-unlist(mclapply(1:ncores, FUN = parAGG, mc.cores = ncores))  
+  } else{pop@data$array[indies]<-parAGG(1)}
+  
+  colnames(pop@data)[ncol(pop@data)]<-namer
+  
+  return(pop)
+  
 }
 
 Genx0y0<-function(SFobj){
@@ -374,7 +487,7 @@ Interp2GRID<-function(GridSF,IntData){
   
 }
 
-InterpOnPolygons<-function(){
+InterpOnPolygons<-function(TS,ADM2){
   
   # This algorithm depends on the input data:
   # 1) if the admin polygon long&lat distances are larger than the raster grid
@@ -385,31 +498,3 @@ InterpOnPolygons<-function(){
   
 }
 
-PlotDisaster<-function(pop,dfpoly,bbox=NULL,map=FALSE,ncity=1,namer="Disaster",filer="./"){
-  
-  if(is.null(bbox)) bbox<-as.numeric(c(min(rownames(pop)),min(colnames(pop)),max(rownames(pop)),max(colnames(pop))))
-  longData<-reshape2::melt(pop)
-  longData<-longData[longData$value!=0,]
-  
-  cities<-maps::world.cities%>%filter(lat>bbox[2]&lat<bbox[4]&long>bbox[1]&long<bbox[3])%>%arrange(desc(pop))
-  if(ncity>1){wordcloud::wordcloud(words=cities$name,freq = cities$pop,max.words = 30,scale = c(2.5,0.2))}
-  cities<-slice(cities,1:ncity)
-  
-  p<-ggplot(longData, aes(x = Var1, y = Var2)) + 
-    geom_raster(aes(fill=value)) + 
-    scale_fill_gradient(low="gray80", high="black") +
-    labs(x="Longitude", y="Latitude", title=namer) +
-    theme_bw() + theme(axis.text.x=element_text(size=9, angle=0, vjust=0.3),
-                       axis.text.y=element_text(size=9),
-                       plot.title=element_text(size=11))
-  for (j in unique(dfpoly$ncontour)){
-    tp<-filter(dfpoly,ncontour==j)
-    p<-p+geom_polygon(data = tp,aes(x=Longitude,y=Latitude,group=Intensity,colour=Intensity),alpha=0,na.rm = T,size=2)+
-      scale_color_gradient(low="mistyrose2", high="red")
-  }
-  p<-p+geom_label(data = cities, aes(long, lat, label = name), size = 4, fontface = "bold", nudge_x = 0.05*(bbox[3]-bbox[1]))
-  
-  print(p)
-  if(!is.null(filer)) ggsave(paste0(namer,".eps"), plot=p,path = filer,width = 9,height = 7.)
-  return(p)
-}
