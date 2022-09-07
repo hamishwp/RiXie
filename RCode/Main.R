@@ -1,4 +1,9 @@
+# Choose the country you want to work with
+ISO<-"MDV"
+
+source("./AdminBoundaries.R")
 source("./GetPackages.R")
+source("./RCode/GeneralFunctions.R")
 source("./MostlyHazard.R")
 source("./MostlyExposure.R")
 source("./MostlyVulnerability.R")

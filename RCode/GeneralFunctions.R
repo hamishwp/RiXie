@@ -3,7 +3,7 @@ library(geosphere)
 library(tidyverse)
 library(magrittr)
 library(ggplot2)
-library(summarytools)
+# library(summarytools)
 library(leaflet)
 library(sf)
 library(ggmap)
@@ -347,9 +347,7 @@ inPoly<-function(poly,pop,iii=1,sumFn=NULL){
 }
 
 Grid2ADM<-function(pop,ADM,sumFn=NULL){
-  
-  sapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop,sumFn=sumFn))
-  
+  as.integer(sapply(1:length(ADM@polygons), function(j) sum(pop@data[inPoly(ADM@polygons[[j]],pop,sumFn=sumFn),1],na.rm = T)))
 }
 
 Genx0y0<-function(SFobj){
@@ -363,7 +361,7 @@ Genx0y0<-function(SFobj){
 Interp2GRID<-function(GridSF,IntData){
   
   # K-Nearest neighbour approach, applying K=1
-  return(IntData%>%raster%>%raster::extract(GridSF@coords))
+  return(IntData%>%raster%>%raster::extract(GridSF@coords,method='bilinear'))
   
   # IntData%<>%as.data.frame()
   # coords<-Genx0y0(GridSF)
@@ -373,6 +371,17 @@ Interp2GRID<-function(GridSF,IntData){
   #                                   xo=coords$xo,yo=coords$yo,
   #                                   linear=F,extrap = T))
   # return(c(layer$z))
+  
+}
+
+InterpOnPolygons<-function(){
+  
+  # This algorithm depends on the input data:
+  # 1) if the admin polygon long&lat distances are larger than the raster grid
+  #    then should take the mean values of all grid cells within polygon
+  tmp<-TS%>%raster%>%raster::extract(ADM2,method='bilinear',fun=mean)
+  # 2) if the distances are smaller, cubic spline interpolate values onto the centroids
+  # 3) if the two datasets are gridded, use 
   
 }
 

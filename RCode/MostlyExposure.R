@@ -24,7 +24,7 @@ GetWorldPopISO3C<-function(iso3c){
                 "/",str_to_lower(iso3c),"_ppp_",yr,"_UNadj_constrained.tif")
     # File name to be saved
     filer<-paste0("WorldPop_Population_UNadj_constrained_",str_to_upper(iso3c),"_",yr,".tif")
-    locy<-paste0(dir,"Data/Exposure/PopDemo/",filer)
+    locy<-paste0("./Data/Exposure/PopDemo/",filer)
     # Go get it!
     checky<-tryCatch(download.file(url,locy),error = function(e) NULL)
     # Did it work?
@@ -32,7 +32,7 @@ GetWorldPopISO3C<-function(iso3c){
       # Extract the mean hazard intensity from raster
       popy<-raster(file.path(locy))
       # Convert it to how we looove it!
-      popy%<>%asSPDF()
+      # popy%<>%asSPDF()
       # it worked!
       extracter<-T
     }
@@ -63,3 +63,38 @@ GetExposure<-function(iso3c){
   
   
 }
+
+
+# pop<-raster("~/Downloads/mdv_population_2020_geotiff/mdv_population_2020.tif")%>%as("SpatialPixelsDataFrame")
+# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
+# ADM2$TotPop<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
+# sum(ADM2$TotPop)
+# sum(pop@data[,1])
+# ADM2$TotPop<-ADM2$TotPop*2
+# 
+# pop<-raster("~/Downloads/mdv_women_2019-06-01_geotiff/MDV_women_2019-06-01.tif")%>%as("SpatialPixelsDataFrame")
+# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
+# ADM2$FemalePop<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
+# sum(ADM2$FemalePop)
+# sum(pop@data[,1])
+# ADM2$FemalePop<-ADM2$FemalePop*2
+# 
+# pop<-raster("~/Downloads/mdv_children_under_five_2019-06-01_geotiff/MDV_children_under_five_2019-06-01.tif")%>%as("SpatialPixelsDataFrame")
+# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
+# ADM2$ChildU5<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
+# sum(ADM2$ChildU5)
+# sum(pop@data[,1])
+# ADM2$ChildU5<-ADM2$ChildU5*2
+
+exp<-read_csv("./Data/Exposure/mdv_admin2_population.csv")
+ADM2%<>%merge(exp,by="ADM1NM")
+
+
+
+
+
+
+
+
+
+

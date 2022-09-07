@@ -1,5 +1,16 @@
 # Call all the required packages for RiXie from the GetPackages.R file
-callLibs()
+source("./RCode/GetPackages.R")
+
+# Extract boundaries file (1st admin level)
+ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
+ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
+ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+ADM2 <- ADM2[ADM2@data$ISO3CD ==ISO, ]
+saveRDS(list(ADM1=ADM1,ADM2=ADM2),paste0("./Data/",ISO,"_ADM.Rdata"))
+
+bbox<-ADM1@bbox
+e <- as(extent(bbox[c(1,3,2,4)]), 'SpatialPolygons')
+crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
 
 # Using the @polygon component of a SpatialPolygonsDataFrame, gives the bounding box
 RecalcBBOX<-function(polygons){
@@ -29,15 +40,19 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
   
 }
 
-# Extract boundaries file (1st admin level)
-ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
-ADM1%<>%filterADM(iso="SSD")
-ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
-ADM2%<>%filterADM(iso="SSD")
-saveRDS(list(ADM1=ADM1,ADM2=ADM2),"./Data/SSD_ADM.Rdata")
+if(ISO=="MDV"){
+  
+  ADM2$AltName<-"Total"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Haa Alifu","Haa Dhaalu","Shaviyani")]<-"North"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Noonu","Raa","Baa","Lhaviyani")]<-"North Central"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Male'","Kaafu","Alifu Alifu","Alifu Dhaalu","Vaavu")]<-"Male"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Faafu","Dhaalu","Meemu")]<-"Central"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Thaa","Laamu","Gaafu Alifu","Gaafu Dhaalu")]<-"South Central"
+  ADM2$AltName[ADM2$ADM1NM%in%c("Gnaviyani","Seenu")]<-"South"
 
-
-
+  ADM2%<>%merge(SHDI,by="AltName")
+  
+}
 
 
 
