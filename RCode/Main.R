@@ -1,14 +1,8 @@
 # Choose the country you want to work with
-ISO<-"MDV"
-
-source("./RCode/GeneralFunctions.R")
-source("./AdminBoundaries.R")
-source("./GetPackages.R")
-source("./MostlyHazard.R")
-source("./MostlyExposure.R")
-source("./MostlyVulnerability.R")
-source("./MostlyClimateChange.R")
-source("./MostlyImpact.R")
+ISO<-"SDN"
+dir<-getwd()
+packred<-F
+source("./RCode/GetPackages.R")
 
 #@@@@@@@@@@@@@ TO DO LIST @@@@@@@@@@@@@#
 # Find a way 

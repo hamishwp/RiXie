@@ -1,21 +1,24 @@
-source("./functions/GetPackages.R")
 # Parallelise the workload
 ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads available, reduce ncores")
 
 #################################################################
 ######################## DEMOGRAPHIC DATA #######################
 #################################################################
-WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T){
+WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T,BGSM=T){
   ############### CONSTRAINED DATASETS ###############
-  if(constrained & kmres & unadj){
+  if(constrained & kmres & unadj & BGSM){
     base_url<-"https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/"
     url<-paste0(base_url,year,"/BSGM/",str_to_upper(iso3c),
                 "/",str_to_lower(iso3c),"_ppp_",year,"_UNadj_constrained.tif")  
+  } else if(constrained & kmres & unadj & !BGSM){
+      base_url<-"https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/"
+      url<-paste0(base_url,year,"/maxar_v1/",str_to_upper(iso3c),
+                  "/",str_to_lower(iso3c),"_ppp_",year,"_UNadj_constrained.tif")  
   } else if(constrained & kmres & !unadj){
     base_url<-"https://data.worldpop.org/GIS/Population/Individual_countries/"
     url<-paste0(base_url,year,"/",str_to_upper(iso3c),
                 "/",str_to_lower(iso3c),"_ppp_",year,"_constrained.tif")  
-  }else if(constrained & !kmres & !unadj){
+  } else if(constrained & !kmres & !unadj){
     warning("100m WorldPop constrained dataset only available for 2010 and 2015")
     stop("please go and download by hand from https://data.worldpop.org/GIS/Population/Individual_countries/")
     year<-c(2010,2015)[which.min(abs(year-c(2010,2015)))]
@@ -53,6 +56,7 @@ WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T){
     url<-paste0(base_url,year,"/",str_to_upper(iso3c),
                 "/",str_to_lower(iso3c),"_ppp_",year,"_1km_Aggregated.tif")
   }
+  return(url)
 }
 # Extract the required URL link to WorldPop and build the file names
 CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
@@ -63,8 +67,16 @@ CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
   locy<-paste0(folder,filer)
   # Attempt to extract file
   checker<-tryCatch(download.file(url,locy),error = function(e) NA)
-  if(is.na(checker)) {stop("Worldpop file not found, please check the WorldPop API address and your input iso3c & year")
-  } else return(list(filer=filer,locy=locy))
+  if(is.na(checker)) {
+    print("No BGSM data for WorldPop, trying for Maxar datasets")
+    # If error, try the maxar-based population data
+    url<-WorldPopURL(iso3c,year,constrained,kmres,unadj,BGSM = F)
+    checker<-tryCatch(download.file(url,locy),error = function(e) NA)
+    if(is.na(checker)) stop("Worldpop file not found, please check the WorldPop API address and your input iso3c & year")
+    
+  } 
+  
+  return(list(filer=filer,locy=locy))
 }
 #@@@@@@@@@@@@@@@@@@@@@@@@@ WORLDPOP POPULATION @@@@@@@@@@@@@@@@@@@@@@@@@@#
 GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./",constrained=T,kmres=T,unadj=T){
@@ -91,28 +103,6 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./",constrained=T,kmres=T,una
   popy%>%as("SpatialPixelsDataFrame")
 }
 
-
-#################################################################
-#@@@@@@@@@@@@@@@@@ ADMIN BOUNDARY AGGREGATION @@@@@@@@@@@@@@@@@@#
-#################################################################
-# Load the administrative boundaries at level 2
-ExtractADM<-function(ISO){
-  ADM<-gadm_sp_loadCountries(
-    unique(ISO),
-    level = 2,
-    basefile="./Data"
-  )
-  ADM<-ADM$spdf
-  ADM@data%<>%dplyr::select(GID_0,NAME_0,GID_2,NAME_2)
-  names(ADM)<-c("ISO3C","Country","ADM2_code","ADM2_name")
-  # Calculate the area (in kilometres squared) of each admin boundary region
-  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
-  centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
-  ADM$LONGITUDE<-centroids[,1]
-  ADM$LATITUDE<-centroids[,2]
-  rm(centroids)
-  return(ADM)
-}
 #################################################################
 #@@@@@@@@@@@@@@@@@@@@@@@@@ EXTRACTION @@@@@@@@@@@@@@@@@@@@@@@@@@#
 #################################################################

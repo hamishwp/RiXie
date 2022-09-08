@@ -8,7 +8,7 @@
 #   4) Environmental & Cultural Assets
 # 
 #@@@@@@@@@@@@@@@@@@@@@@ Population & Demography @@@@@@@@@@@@@@@@@@@@@@#
-
+source(paste0(dir,"/RCode/GetDemographics.R"))
 
 GetWorldPopISO3C<-function(iso3c){
   

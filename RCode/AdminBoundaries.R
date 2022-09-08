@@ -1,16 +1,46 @@
 # Call all the required packages for RiXie from the GetPackages.R file
 source("./RCode/GetPackages.R")
 
-# Extract boundaries file (1st admin level)
-ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
-ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
-ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
-ADM2 <- ADM2[ADM2@data$ISO3CD ==ISO, ]
-saveRDS(list(ADM1=ADM1,ADM2=ADM2),paste0("./Data/",ISO,"_ADM.Rdata"))
+#################################################################
+#@@@@@@@@@@@@@@@@@ ADMIN BOUNDARY AGGREGATION @@@@@@@@@@@@@@@@@@#
+#################################################################
+GetUNMaps<-function(ISO){
+  # Extract boundaries file (1st admin level)
+  # ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
+  # ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
+  ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+  ADM2 <- ADM2[ADM2@data$ISO3CD ==ISO, ]
+  
+  return(ADM2)
+}
 
-bbox<-ADM1@bbox
-e <- as(extent(bbox[c(1,3,2,4)]), 'SpatialPolygons')
-crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
+# From Sub-national HDI at Global Data Lab
+GetSHDIadmin<-function(ISO){
+  ADM<-as(sf::st_read("./Data/AdminBoundaries/GDL_Shapefiles_V6/shdi2022_World_large.shp"),"Spatial")
+  ADM <- ADM[!is.na(ADM@data$iso_code) & ADM@data$iso_code ==ISO, ]
+  
+  return(ADM)
+  
+}
+
+# Load the administrative boundaries at level 2 from GADM
+ExtractADM<-function(ISO){
+  ADM<-gadm_sp_loadCountries(
+    unique(ISO),
+    level = 2,
+    basefile="./Data"
+  )
+  ADM<-ADM$spdf
+  ADM@data%<>%dplyr::select(GID_0,NAME_0,GID_2,NAME_2)
+  names(ADM)<-c("ISO3C","Country","ADM2_code","ADM2_name")
+  # Calculate the area (in kilometres squared) of each admin boundary region
+  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
+  centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
+  # ADM$LONGITUDE<-centroids[,1]
+  # ADM$LATITUDE<-centroids[,2]
+  rm(centroids)
+  return(ADM)
+}
 
 # Using the @polygon component of a SpatialPolygonsDataFrame, gives the bounding box
 RecalcBBOX<-function(polygons){
