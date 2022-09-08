@@ -1,11 +1,48 @@
 ###############################################################
 ######################### HAZARD DATA #########################
 ###############################################################
-
+# Flood hazard map (100 year return period)
+# https://data.europa.eu/data/datasets/jrc-floods-floodmapgl_rp100y-tif?locale=en
+GetFloodRisk<-function(ADM,ISO){
+  
+  FL<-brick("./Data/Hazard/floodMapGL_rp100y.tif")
+  projection(FL)<-"+proj=longlat +datum=WGS84 +no_defs"
+  e <- as(extent(ADM@bbox[c(1,3,2,4)]), 'SpatialPolygons')
+  crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
+  FL%<>%crop(e)%>%as("SpatialPixelsDataFrame")
+  
+  # Aggregate the population data to admin level 2
+  FLr<-Grid2ADM(FL,outsiders = F,
+                   ADM,
+                   sumFn="mean",
+                   index = 1,
+                   ncores = ncores)
+  # Combine into one large data.frame
+  ADM@data%<>%cbind(data.frame(FL100yr=FLr))
+  return(ADM)
+}
 # Tsunami risk dataset
 # Historical tsunamis can be found here: https://www.kaggle.com/datasets/andrewmvd/tsunami-dataset
 # https://preview.grid.unep.ch/index.php?preview=data&events=tsunamis&evcat=2&lang=eng
-TS<-raster("./Data/Hazard/ts_frequency.tif")
+GetTsunamiRisk<-function(ADM,ISO){
+  
+  TS<-raster("./Data/Hazard/ts_frequency.tif")
+  projection(TS)<-"+proj=longlat +datum=WGS84 +no_defs"
+  e <- as(extent(ADM@bbox[c(1,3,2,4)]), 'SpatialPolygons')
+  crs(e) <- "+proj=longlat +datum=WGS84 +no_defs"
+  TS%<>%crop(e)%>%as("SpatialPixelsDataFrame")
+  
+  # Aggregate the population data to admin level 2
+  TSr<-Grid2ADM(TS,outsiders = F,
+                   ADM,
+                   sumFn="mean",
+                   index = 1,
+                   ncores = ncores)
+  # Combine into one large data.frame
+  ADM@data%<>%cbind(data.frame(Tsunami=round(TSr)))
+  return(ADM)
+}
+
 TS%<>%crop(e)%>%as("SpatialPixelsDataFrame")
 ADM2$Tsunami<-TS%>%raster%>%raster::extract(ADM2,method='bilinear',fun=mean)%>%as.numeric()
 
@@ -35,13 +72,6 @@ vals<-sapply(1:nrow(ESL), function(i){
   geodist(coordinates(centroiders),ESL[i,1:2])
 })
 ADM2$ExtrSeaLevel<-ESL$ESL[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
-
-# Flood hazard map (100 year return period)
-# https://data.europa.eu/data/datasets/jrc-floods-floodmapgl_rp100y-tif?locale=en
-# FL<-brick("./Data/Hazard/floodMapGL_rp100y.tif")
-# projection(FL)<-"+proj=longlat +datum=WGS84 +no_defs"
-# FL%<>%crop(e)%>%as("SpatialPixelsDataFrame")
-
 
 # Tropical cyclone risk map 
 # https://www.nature.com/articles/s41597-020-0381-2#Sec9        

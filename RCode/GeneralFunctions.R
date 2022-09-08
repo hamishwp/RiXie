@@ -293,6 +293,13 @@ convIso3Continent<-function(iso3){
                                        destination = "continent",warn = F)
 }
 
+# And the opposite!
+convCountryIso3<-function(country){
+  countrycode::countrycode(sourcevar = country,
+                           origin = "country.name",
+                           destination = "iso3c",warn = F)
+}
+
 coords2country = function(points,iso=T)
 {  
   if(dim(points)[2]!=2) stop("coords2country Error: long/lat coords are invalid")
@@ -329,7 +336,18 @@ countriesbbox<-function(iso3){
   return(c(mnlo,mnla,mxlo,mxla))
   
 }
-
+# Function to extract the coordinates of all the polygons
+extractPolyCoords<-function(ADM){
+  coords<-data.frame()
+  for(i in 1:length(ADM@polygons)){
+    for(j in 1:length(ADM@polygons[[i]]@Polygons)){
+      coords%<>%rbind(data.frame(LONGITUDE=ADM@polygons[[1]]@Polygons[[1]]@coords[,1],
+                                 LATITUDE=ADM@polygons[[1]]@Polygons[[1]]@coords[,2],
+                                 i=i,j=j))
+    }
+  }
+  return(coords)
+}
 # Find which coordinates of an S4 spatial object lie inside (or on the boundary of) a spatial polygon file
 inPoly<-function(poly,pop,iii=1,sumFn="sum"){
   
@@ -383,15 +401,18 @@ Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
   # Now to catch the annoying values that weren't located inside any of the polygons!
   # make a dataframe full of the coordinates of the polygons and indices of the corresponding polygon
   polycoords<-extractPolyCoords(ADM)
-  mind<-0; vals_s<-vals
+  # Make sure that the distance is not more than 2 grid cells away:
+  mdistie<-sqrt(sum(pop@grid@cellsize^2))
+  mind<-kk<-valmis<-0; vals_s<-vals
   for(i in which(!indies)) {
     # Find the closest polygon
     disties<-abs(coords[i,1]-polycoords$LONGITUDE)*abs(coords[i,2]-polycoords$LATITUDE)
     minnie<-which.min(disties)
+    if(disties[minnie]>mdistie) {kk<-kk+1; valmis<-valmis+data[i,index]; next}
     mind%<>%max(disties[minnie])
     vals[polycoords$i[minnie]]<-vals[polycoords$i[minnie]]+data[i,index]
   }
-  warning(paste0("Maximum distance between values not inside polygon was = ",mind))
+  warning(paste0("Number & sum of gridpoints not inside admin boundaries = ",kk," totaling ",valmis))
   return(list(polyonly=vals_s,all=vals,mind=mind))
 }
 # 

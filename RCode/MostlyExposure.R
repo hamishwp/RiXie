@@ -10,84 +10,79 @@
 #@@@@@@@@@@@@@@@@@@@@@@ Population & Demography @@@@@@@@@@@@@@@@@@@@@@#
 source(paste0(dir,"/RCode/GetDemographics.R"))
 
-GetWorldPopISO3C<-function(iso3c){
+# GDP from Kummu et al 2018
+FilterKummu<-function(GDP,bbox,melted=F){
   
-  # Try to download the most recent dataset
-  year<-AsYear(Sys.Date())
-  # This is the main link to the WorldPop datasets
-  base_url<-"https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/"
-  # Go through every year from now until 2020 until we find some data!
-  yr<-year; extracter<-F
-  while(extracter | yr>=2020){
-    # Main host URL
-    url<-paste0(base_url,yr,"/BSGM/",str_to_upper(iso3c),
-                "/",str_to_lower(iso3c),"_ppp_",yr,"_UNadj_constrained.tif")
-    # File name to be saved
-    filer<-paste0("WorldPop_Population_UNadj_constrained_",str_to_upper(iso3c),"_",yr,".tif")
-    locy<-paste0("./Data/Exposure/PopDemo/",filer)
-    # Go get it!
-    checky<-tryCatch(download.file(url,locy),error = function(e) NULL)
-    # Did it work?
-    if(is.null(checky)) {yr<-yr-1; next} else {
-      # Extract the mean hazard intensity from raster
-      popy<-raster(file.path(locy))
-      # Convert it to how we looove it!
-      # popy%<>%asSPDF()
-      # it worked!
-      extracter<-T
-    }
+  lat<-as.numeric(colnames(GDP))
+  lon<-as.numeric(rownames(GDP))
+  nlat<- length(lat)
+  nlon<- length(lon)
+  
+  imnlon<-which.min(abs(lon-bbox[1]))
+  if(imnlon>1) imnlon<-imnlon-1
+  imxlon<-which.min(abs(lon-bbox[3]))
+  if(imxlon<nlon) imxlon<-imxlon+1
+  imnlat<-which.min(abs(lat-bbox[2]))
+  if(imnlat>1) imnlat<-imnlat-1
+  imxlat<-which.min(abs(lat-bbox[4]))
+  if(imxlat<nlat) imxlat<-imxlat+1
+  
+  # GDP_PPP[longitude,latitude]
+  if(!melted) return(GDP[imnlon:imxlon,imnlat:imxlat])
+  GDP<-GDP[imnlon:imxlon,imnlat:imxlat]
+  GDP<-melt(GDP);colnames(GDP)<-c("X","Y","data")
+  return(GDP)
+  
+}
+
+GetKummu<-function(dir,bbox=NULL,yr=2015L){
+  
+  iii<-yr-1989L
+  
+  # file<-paste0(dir,"Demography_Data/SocioEconomic/KUMMU/GDP_PPP_30arcsec_v3.nc")
+  file<-paste0(dir,"/Data/Exposure/GDP/GDP_per_capita_PPP_1990_2015_v2.nc")
+  GDP<-brick(file,varname="GDP_per_capita_PPP")
+  GDP<-GDP[[iii]]
+  
+  if(!is.null(bbox)) {
+    e <- as(raster::extent(c(bbox[c(1,3,2,4)])), 'SpatialPolygons')
+    crs(e) <- "+proj=longlat +datum=WGS84 +ellps=WGS84"
+    GDP%<>%raster::crop(e)
   }
   
-  if(!extracter) stop("Error in extracting population data from WorldPop")
-  
-  return(popy)
-  
-}
-
-
-GetExpPopDemo<-function(iso3c){
-  
-  # WorldPop database: 
+  GDP%<>%as('SpatialPixelsDataFrame')
+  names(GDP)[1]<-"GDP"
+  return(GDP)
   
 }
 
-GetExpPop<-function(iso3c){
-  
-  
-  
+GetGDP<-function(ADM,ISO,ncores=2){
+  GDP<-GetKummu(dir,bbox=c(ADM@bbox),yr=2015L)
+  # Resample onto admin boundaries
+  # Aggregate the population data to admin level 2
+  GDP%<>%Grid2ADM(ADM,outsiders = F,
+                   sumFn="mean",
+                   index = 1,
+                   ncores = ncores)
+  # For many countries, the GDP data is only one value
+  if(max(table(GDP))/length(GDP)>0.8) {
+    warning(paste0("Only one GDP value was present in the Kummu dataset for ",convIso3Country(ISO)))
+    GDP<-as.numeric(names(which.max(table(GDP))))
+  }
+  GDP<-GDP*InterpGDPWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
+  # Combine into one large data.frame
+  ADM@data%<>%cbind(data.frame(GDP=GDP))
+  return(ADM)
 }
 
-
-
-GetExposure<-function(iso3c){
-  
-  
+plotGDP<-function(GDP,zoom=5){
+  mad_map <- get_stamenmap(GDP@bbox,source = "stamen",maptype = "toner",zoom=zoom)
+  p<-ggmap(mad_map) + xlab("Longitude") + ylab("Latitude")
+  p+geom_contour_filled(data = as.data.frame(GDP),
+                        mapping = aes(x,y,z=X2015),
+                        alpha=0.7)+ 
+    labs(fill = "GDP-PPP [USD-2015]")
 }
-
-
-# pop<-raster("~/Downloads/mdv_population_2020_geotiff/mdv_population_2020.tif")%>%as("SpatialPixelsDataFrame")
-# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
-# ADM2$TotPop<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
-# sum(ADM2$TotPop)
-# sum(pop@data[,1])
-# ADM2$TotPop<-ADM2$TotPop*2
-# 
-# pop<-raster("~/Downloads/mdv_women_2019-06-01_geotiff/MDV_women_2019-06-01.tif")%>%as("SpatialPixelsDataFrame")
-# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
-# ADM2$FemalePop<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
-# sum(ADM2$FemalePop)
-# sum(pop@data[,1])
-# ADM2$FemalePop<-ADM2$FemalePop*2
-# 
-# pop<-raster("~/Downloads/mdv_children_under_five_2019-06-01_geotiff/MDV_children_under_five_2019-06-01.tif")%>%as("SpatialPixelsDataFrame")
-# # ADM2$TotPop<-Grid2ADM(pop,ADM2)
-# ADM2$ChildU5<-pop%>%raster%>%raster::extract(ADM2,method='bilinear',fun=sum,na.rm=T)%>%as.numeric()
-# sum(ADM2$ChildU5)
-# sum(pop@data[,1])
-# ADM2$ChildU5<-ADM2$ChildU5*2
-
-exp<-read_csv("./Data/Exposure/mdv_admin2_population.csv")
-ADM2%<>%merge(exp,by="ADM1NM")
 
 
 

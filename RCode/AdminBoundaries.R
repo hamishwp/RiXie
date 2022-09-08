@@ -8,10 +8,23 @@ GetUNMaps<-function(ISO){
   # Extract boundaries file (1st admin level)
   # ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
   # ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
-  ADM2<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
-  ADM2 <- ADM2[ADM2@data$ISO3CD ==ISO, ]
+  ADM<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+  ADM <- ADM[ADM@data$ISO3CD ==ISO, ]
+  ADM@data%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
+  # Calculate the area (in kilometres squared) of each admin boundary region
+  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
+  centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
+  ADM$LONGITUDE<-centroids[,1]
+  ADM$LATITUDE<-centroids[,2]
   
   return(ADM2)
+}
+
+CheckLandLock<-function(ISO){
+  # From Wikipedia page on landlocked countries, but I also added Sudan
+  landl<-xlsx::read.xlsx(paste0(dir,"/Data/AdminBoundaries/LandlockedCountries.xlsx"),
+                  sheetName = "Sheet1",as.data.frame = T)%>%filter(ISO3C==ISO)
+  return(nrow(landl)>0)
 }
 
 # From Sub-national HDI at Global Data Lab
@@ -36,9 +49,8 @@ ExtractADM<-function(ISO){
   # Calculate the area (in kilometres squared) of each admin boundary region
   ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
   centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
-  # ADM$LONGITUDE<-centroids[,1]
-  # ADM$LATITUDE<-centroids[,2]
-  rm(centroids)
+  ADM$LONGITUDE<-centroids[,1]
+  ADM$LATITUDE<-centroids[,2]
   return(ADM)
 }
 

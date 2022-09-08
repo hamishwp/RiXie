@@ -1,6 +1,3 @@
-# Parallelise the workload
-ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads available, reduce ncores")
-
 #################################################################
 ######################## DEMOGRAPHIC DATA #######################
 #################################################################
@@ -109,41 +106,35 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./",constrained=T,kmres=T,una
 
 ####################### GRIDDED WORLDPOP #######################
 # Extract population data and put the conflict data onto the grid
-GetPop<-function(ISO,ADM){
+GetPop<-function(ISO,ADM,ncores=2){
   FullADM<-data.frame()
-  # Create a temporary column on sth_asia_st full of ones to count later on
-  for (iso3c in unique(ISO)){
-    print(paste0("Currently working on ",convIso3Country(iso3c)))
-    isoframe<-data.frame()
     # Get the WorldPop data
     pop<-GetWorldPopISO3C(iso3c,2020,folder="./",constrained=T,kmres=T,unadj=T)
     names(pop)[1]<-"POPULATION"
     # Aggregate the population data to admin level 2
     popvec<-Grid2ADM(pop,
-                     ADM[ADM@data$ISO3C==iso3c,],
+                     ADM[ADM@data$ISO3C==ISO,],
                      sumFn="sum",
                      index = which(names(pop)=="POPULATION"),
-                     ncores = cpus); rm(pop)
+                     ncores = ncores)
+    # Scale to make sure that the value is current
+    popvec$all<-popvec$all*InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
     # Combine into one large data.frame
-    FullADM%<>%rbind(data.frame(POPULATION=popvec$all,
-                                POP_POLYONLY=popvec$polyonly))
-  }
-  
-  return(list(events=FullADM,boundaries=ADM))
-  
+    ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
+    return(ADM)
 }
 
 GetDemog<-function(Dasher,ISO){
   # Get World Bank data
   # Gender stats
   Gend<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.TOTL.FE.ZS",ISO=ISO)
-  Dasher$FemalePop<-Dasher$Pop*Gend$value[1]/100
+  Dasher$FemalePop<-round(Dasher$POPULATION*Gend$value[1]/100)
   # Under14 stats
   Und14<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.0014.TO.ZS",ISO=ISO)
-  Dasher$Under14Pop<-Dasher$Pop*Und14$value[1]/100
+  Dasher$Under14Pop<-round(Dasher$POPULATION*Und14$value[1]/100)
   # Over 64 stats
   Ovr64<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.65UP.TO.ZS",ISO=ISO)
-  Dasher$Over64Pop<-Dasher$Pop*Ovr64$value[1]/100
+  Dasher$Over64Pop<-round(Dasher$POPULATION*Ovr64$value[1]/100)
   
   return(Dasher)
 }
