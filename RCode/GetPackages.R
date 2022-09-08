@@ -30,9 +30,9 @@ LoadLibraries<-function(packred){
 
 GetRiXiePackages<-function(packred){
   
-  list.of.packages <- c("ggplot2","sf","tidyverse","openxlsx","pracma",
+  list.of.packages <- c("ggplot2","sf","tidyverse","openxlsx","pracma","exactextractr",
                         "geojsonR", "tiff", "gstat", "mvtnorm","raster","geodist",
-                        "RColorBrewer", "geosphere","GGally", "wbstats",
+                        "RColorBrewer", "geosphere","GGally", "wbstats","HiClimR",
                         "countrycode","rworldmap","rworldxtra","chron","ncdf4",
                         "GADMTools","akima","adehabitatMA","flexsurv")
   

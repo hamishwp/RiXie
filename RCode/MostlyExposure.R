@@ -10,6 +10,17 @@
 #@@@@@@@@@@@@@@@@@@@@@@ Population & Demography @@@@@@@@@@@@@@@@@@@@@@#
 source(paste0(dir,"/RCode/GetDemographics.R"))
 
+GetInfra<-function(ADM,ISO,ext){
+  Infra<-brick(paste0(dir,"/Data/Exposure/BuiltUpArea/GHS_BUILT_S_E2020_GLOBE_R2022A_54009_1000_V1_0.tif"))
+  projection(Infra)<-"+proj=longlat +datum=WGS84 +no_defs"
+  Infra%<>%crop(ext)
+  # Note we use bilinear interpolation because none of the none-zero values 
+  # will be inside the admin boundaries
+  ADM$BuiltUp<-Infra%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
+  return(ADM)
+  
+}
+
 # GDP from Kummu et al 2018
 FilterKummu<-function(GDP,bbox,melted=F){
   
@@ -35,7 +46,7 @@ FilterKummu<-function(GDP,bbox,melted=F){
   
 }
 
-GetKummu<-function(dir,bbox=NULL,yr=2015L){
+GetKummu<-function(dir,ext=NULL,yr=2015L){
   
   iii<-yr-1989L
   
@@ -44,11 +55,7 @@ GetKummu<-function(dir,bbox=NULL,yr=2015L){
   GDP<-brick(file,varname="GDP_per_capita_PPP")
   GDP<-GDP[[iii]]
   
-  if(!is.null(bbox)) {
-    e <- as(raster::extent(c(bbox[c(1,3,2,4)])), 'SpatialPolygons')
-    crs(e) <- "+proj=longlat +datum=WGS84 +ellps=WGS84"
-    GDP%<>%raster::crop(e)
-  }
+  if(!is.null(ext)) GDP%<>%raster::crop(ext)
   
   GDP%<>%as('SpatialPixelsDataFrame')
   names(GDP)[1]<-"GDP"
@@ -56,14 +63,11 @@ GetKummu<-function(dir,bbox=NULL,yr=2015L){
   
 }
 
-GetGDP<-function(ADM,ISO,ncores=2){
-  GDP<-GetKummu(dir,bbox=c(ADM@bbox),yr=2015L)
+GetGDP<-function(ADM,ISO,ext,ncores=2){
+  GDP<-GetKummu(dir,ext,yr=2015L)
   # Resample onto admin boundaries
   # Aggregate the population data to admin level 2
-  GDP%<>%Grid2ADM(ADM,outsiders = F,
-                   sumFn="mean",
-                   index = 1,
-                   ncores = ncores)
+  GDP%<>%raster%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
   # For many countries, the GDP data is only one value
   if(max(table(GDP))/length(GDP)>0.8) {
     warning(paste0("Only one GDP value was present in the Kummu dataset for ",convIso3Country(ISO)))

@@ -415,6 +415,20 @@ Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
   warning(paste0("Number & sum of gridpoints not inside admin boundaries = ",kk," totaling ",valmis))
   return(list(polyonly=vals_s,all=vals,mind=mind))
 }
+
+# Go from one set of admin boundaries to another, using the centroids of one of them
+Poly2poly<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T){
+  
+  
+  
+  
+  
+  
+  
+  
+  
+}
+
 # 
 # Points2Grid<-function(confy,pop,agg){
 #  

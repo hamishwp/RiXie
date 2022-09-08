@@ -9,15 +9,25 @@ GetUNMaps<-function(ISO){
   # ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
   # ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
   ADM<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+  projection(ADM)<-"+proj=longlat +datum=WGS84 +no_defs"
   ADM <- ADM[ADM@data$ISO3CD ==ISO, ]
   ADM@data%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
   # Calculate the area (in kilometres squared) of each admin boundary region
   ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
-  centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
-  ADM$LONGITUDE<-centroids[,1]
-  ADM$LATITUDE<-centroids[,2]
+  centroids<-rgeos::gCentroid(ADM,byid=TRUE)
+  ADM$LONGITUDE<-centroids@coords[,1]
+  ADM$LATITUDE<-centroids@coords[,2]
   
-  return(ADM2)
+  return(ADM)
+}
+
+GetExtent<-function(ADM,expander=NULL){
+  bbox<-ADM@bbox
+  # Expand the bounding box, useful for the interpolation
+  if(!is.null(expander)) bbox%<>%expandBbox(1.1)
+  ext<-as(extent(bbox[c(1,3,2,4)]), 'SpatialPolygons')
+  crs(ext) <- "+proj=longlat +datum=WGS84 +no_defs"  
+  return(ext)
 }
 
 CheckLandLock<-function(ISO){
