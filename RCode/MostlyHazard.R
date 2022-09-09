@@ -28,27 +28,18 @@ GetLandslide<-function(ADM,ISO,ext){
 GetAirPollution<-function(ADM,ISO,ext){
   SLR<-nc_open(paste0(dir,"/Data/Hazard/V5GL02.HybridPM25.Global.202001-202012.nc"))
   # Extract variables
-  RPS<-ncvar_get(SLR,"GWRPM25")
-  Longitude=ncvar_get(SLR,"lon")
-  Latitude=ncvar_get(SLR,"lat")
+  RPS<-ncvar_get(SLR,"GWRPM25")%>%as.vector()
+  Longitude<-ncvar_get(SLR,"lon")
+  Latitude<-ncvar_get(SLR,"lat")
   nc_close(SLR)
-  # Get a 2D grid from the coordinates provided
-  griddy<-HiClimR::grid2D(Longitude,Latitude)
   
-  stop("Sort out the grid for air pollution, the netcdf file didn't give one")
-  ESL<-data.frame()
+  RPSout<-raster(ncol=length(Longitude), nrow=length(Latitude),
+                 xmn=min(Longitude), xmx=max(Longitude),
+                 ymn=min(Latitude), ymx=max(Latitude))
+  values(RPSout)<-RPS
+  RPSout%<>%crop(ext)
   
-  ind<-ESL$Longitude>ADM@bbox[1]&
-    ESL$Longitude<ADM@bbox[3]&
-    ESL$Latitude>ADM@bbox[2]&
-    ESL$Latitude<ADM@bbox[4]
-  
-  ESL<-ESL[ind,]
-  
-  vals<-sapply(1:nrow(ESL), function(i){
-    geodist(coordinates(centroiders),ESL[i,1:2])
-  })
-  ADM$ExtrSeaLevel50yr<-ESL$ESL[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  ADM$AirPollution<-RPSout%>%raster::extract(ADM,method='bilinear',na.rm=T,fun=mean)%>%as.numeric()
   
   return(ADM)
   
@@ -83,25 +74,22 @@ GetTsunamiRisk<-function(ADM,ISO,ext){
 # This dataset should be replaced by the more recent and higher resolution European Space Agency (ESA) one (https://catalogue.ceda.ac.uk/uuid/a0a6fa39470a4a7baf847e3a1751f950?jump=related-anchor)
 GetSeaLevelRise<-function(ADM,ISO){
   SLR<-nc_open(paste0(dir,"/Data/Hazard/SeaLevelRise_CODEC_amax_ERA5_1979_2017_coor_mask_GUM_RPS.nc"))
+  
   RPS<-ncvar_get(SLR,"RPS")
   return_periods<-ncvar_get(SLR,"return_periods")
+  RPS<-RPS[return_periods==50,]%>%as.vector()
   # Choose a 10-year return period (why not?)
-  ESL<-data.frame(Longitude=ncvar_get(SLR,"station_x_coordinate"),
-                  Latitude=ncvar_get(SLR,"station_y_coordinate"),
-                  ESL=RPS[return_periods==50,])
+  Longitude<-ncvar_get(SLR,"station_x_coordinate")
+  Latitude<-ncvar_get(SLR,"station_y_coordinate")
   nc_close(SLR)
   
-  ind<-ESL$Longitude>ADM@bbox[1]&
-    ESL$Longitude<ADM@bbox[3]&
-    ESL$Latitude>ADM@bbox[2]&
-    ESL$Latitude<ADM@bbox[4]
-
-  ESL<-ESL[ind,]
+  RPSout<-raster(ncol=length(Longitude), nrow=length(Latitude),
+                 xmn=min(Longitude), xmx=max(Longitude),
+                 ymn=min(Latitude), ymx=max(Latitude))
+  values(RPSout)<-RPS
+  RPSout%<>%crop(ext)
   
-  vals<-sapply(1:nrow(ESL), function(i){
-    geodist(coordinates(centroiders),ESL[i,1:2])
-  })
-  ADM$ExtrSeaLevel50yr<-ESL$ESL[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  ADM$ExtrSeaLevel50yr<-RPSout%>%raster::extract(ADM,method='bilinear',na.rm=T,fun=mean)%>%as.numeric()
   
   return(ADM)
 }

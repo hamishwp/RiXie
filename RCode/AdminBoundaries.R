@@ -1,6 +1,3 @@
-# Call all the required packages for RiXie from the GetPackages.R file
-source("./RCode/GetPackages.R")
-
 #################################################################
 #@@@@@@@@@@@@@@@@@ ADMIN BOUNDARY AGGREGATION @@@@@@@@@@@@@@@@@@#
 #################################################################
@@ -17,6 +14,9 @@ GetUNMaps<-function(ISO){
   centroids<-rgeos::gCentroid(ADM,byid=TRUE)
   ADM$LONGITUDE<-centroids@coords[,1]
   ADM$LATITUDE<-centroids@coords[,2]
+  
+  ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 
+           !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
   
   return(ADM)
 }

@@ -13,7 +13,7 @@ for (iso3c in unique(ISO)){
   # ADMIN LEVEL BOUNDARIES
   Dasher<-GetUNMaps(iso3c)
   # Check if landlocked or not:
-  Landlocked<-CheckLandLock(ISO)
+  Landlocked<-CheckLandLock(iso3c)
   # Bounding box of the country for cropping
   ext <- GetExtent(Dasher,expander=1.1)
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -51,27 +51,27 @@ for (iso3c in unique(ISO)){
   #@@@@@@@@@@@ HAZARD @@@@@@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   # Air pollution
-  Dasher%<>%GetAirPollution(ISO=ISO)
+  Dasher%<>%GetAirPollution(ISO=iso3c)
   # Tropical Cyclones
-  Dasher%<>%GetTropCyc(ISO=ISO,ext=ext)
+  Dasher%<>%GetTropCyc(ISO=iso3c,ext=ext)
   # Floods
-  Dasher%<>%GetFloodRisk(ISO=ISO,ext=ext)
+  Dasher%<>%GetFloodRisk(ISO=iso3c,ext=ext)
   # Drought
-  Dasher%<>%GetDrought(ISO=ISO,ext=ext)
+  Dasher%<>%GetDrought(ISO=iso3c,ext=ext)
   # Earthquakes
-  Dasher%<>%GetEarthquakeRisk(ISO=ISO,ext=ext)
+  Dasher%<>%GetEarthquakeRisk(ISO=iso3c,ext=ext)
   # Landslides
-  Dasher%<>%GetLandslide(ISO=ISO,ext=ext)
+  Dasher%<>%GetLandslide(ISO=iso3c,ext=ext)
   # Extreme Heat
-  Dasher%<>%GetExtremeHeat(ISO=ISO,ext=ext)
+  Dasher%<>%GetExtremeHeat(ISO=iso3c,ext=ext)
   # Volcanic Ash
-  Dasher%<>%GetVolcAsh(ISO=ISO,ext=ext)
+  Dasher%<>%GetVolcAsh(ISO=iso3c,ext=ext)
   # Include coastal hazards such as tsunami or sea level rise
   if(!Landlocked){
     # Sea Level Rise data
-    Dasher%<>%GetSeaLevelRise(ISO=ISO)
+    Dasher%<>%GetSeaLevelRise(ISO=iso3c)
     # Tsunami Risk
-    Dasher%<>%GetTsunamiRisk(ISO=ISO,ext=ext)
+    Dasher%<>%GetTsunamiRisk(ISO=iso3c,ext=ext)
   }
   
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -83,13 +83,21 @@ for (iso3c in unique(ISO)){
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@ CLIMATE CHANGE @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+  tmp<-GetCCPrecip(Dasher,ISO=iso3c)
+  CCtable<-tmp$temporal; Dasher<-tmp$ADM
+  tmp<-GetCCSurfTemp(Dasher,ISO=iso3c)
+  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM
+  tmp<-GetCCTotRunoff(Dasher,ISO=iso3c)
+  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM; rm(tmp)
   
   # Create a folder for the results
-  dir.create(paste0(dir,"/Results/",ISO),showWarnings = F,recursive = T)
+  dir.create(paste0(dir,"/Results/",iso3c),showWarnings = F,recursive = T)
   rgdal::writeOGR(Dasher,
-                  dsn=paste0(dir,"Results/",ISO,"/",ISO),
+                  dsn=paste0(dir,"Results/",iso3c,"/ADM_",iso3c),
                   layer = "map",
                   driver = "ESRI Shapefile",overwrite_layer = T)
+  
+  xlsx::write.xlsx(CCtable,paste0(dir,"/Results/",iso3c,"/CC_tables_",iso3c,".xlsx"))
   
 }
 

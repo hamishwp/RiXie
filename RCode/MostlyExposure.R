@@ -10,10 +10,22 @@
 #@@@@@@@@@@@@@@@@@@@@@@ Population & Demography @@@@@@@@@@@@@@@@@@@@@@#
 source(paste0(dir,"/RCode/GetDemographics.R"))
 
+# GHS Built-Up Area
 GetInfra<-function(ADM,ISO,ext){
   Infra<-brick(paste0(dir,"/Data/Exposure/BuiltUpArea/GHS_BUILT_S_E2020_GLOBE_R2022A_54009_1000_V1_0.tif"))
   projection(Infra)<-"+proj=longlat +datum=WGS84 +no_defs"
   Infra%<>%crop(ext)
+  # Note we use bilinear interpolation because none of the none-zero values 
+  # will be inside the admin boundaries
+  ADM$BuiltUp<-Infra%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
+  
+}
+
+# https://www.eea.europa.eu/data-and-maps/data/global-land-cover-250m
+GetLandCover<-function(ADM,ISO,ext){
+  ecol<-brick(paste0(dir,"/Data/Exposure/Ecological/GLC2000_EU_250m.tif"))
+  projection(ecol)<-"+proj=longlat +datum=WGS84 +no_defs"
+  ecol%<>%crop(ext)
   # Note we use bilinear interpolation because none of the none-zero values 
   # will be inside the admin boundaries
   ADM$BuiltUp<-Infra%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()

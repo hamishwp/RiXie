@@ -417,16 +417,52 @@ Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
 }
 
 # Go from one set of admin boundaries to another, using the centroids of one of them
-Poly2poly<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T){
-  
-  
-  
-  
-  
-  
-  
-  
-  
+Poly2poly<-function(polyDF,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T){
+  # Find the ADM boundaries that lie within GDL boundaries
+  whichin<-sapply(1:length(polyDF@polygons),
+              function(i) sapply(1:length(polyDF@polygons[[i]]@Polygons), 
+                                 function(j) which(sp::point.in.polygon(ADM$LONGITUDE,
+                                                                        ADM$LATITUDE,
+                                                                        polyDF@polygons[[i]]@Polygons[[j]]@coords[,1],
+                                                                        polyDF@polygons[[i]]@Polygons[[j]]@coords[,2])>0)))
+  adder<-c()
+  for(i in 1:length(whichin)) adder%<>%c(rep(i,length(unlist(whichin[[i]]))))
+  indies<-data.frame(indexADM=unlist(whichin),indexGDL=adder, GDLCODE=SHDI$GDLCODE[adder])
+  # Find any admin areas that were not found inside a GDL boundary
+  missADM<-which(!1:nrow(ADM) %in% indies$indexADM)
+  if(length(missADM)!=0) {
+    # Now lets see whether any of their boundary coordinates fall inside a GDL boundary
+    stillmiss<-c()
+    for(mm in missADM){
+      longitude<-unlist(sapply(1:length(ADM@polygons[[mm]]@Polygons),function(k) ADM@polygons[[mm]]@Polygons[[k]]@coords[,1],simplify = T))
+      latitude<-unlist(sapply(1:length(ADM@polygons[[mm]]@Polygons),function(k) ADM@polygons[[mm]]@Polygons[[k]]@coords[,2],simplify = T))
+      whichin<-sapply(1:length(polyDF@polygons),
+                      function(i) sapply(1:length(polyDF@polygons[[i]]@Polygons), 
+                                         function(j) which(sp::point.in.polygon(longitude,latitude,
+                                                                                polyDF@polygons[[i]]@Polygons[[j]]@coords[,1],
+                                                                                polyDF@polygons[[i]]@Polygons[[j]]@coords[,2])>0)))
+      if(length(unlist(whichin))==0) {
+        # indies%<>%rbind(data.frame(indexADM=mm,indexGDL=NA,GDLCODE=NA))
+        stillmiss%<>%c(mm)
+        next
+      }
+      missInd<-which.max(sapply(1:length(whichin),function(i) length(unlist(whichin[[i]]))))
+      indies%<>%rbind(data.frame(indexADM=mm,indexGDL=missInd,GDLCODE=SHDI$GDLCODE[missInd]))
+    }
+    # FINAL RESORT... Use the first two admin level numbers closest to this value to determine GDL boundary
+    for(mm in stillmiss){
+      first<-indies$indexADM[which.min(abs(stillmiss-indies$indexADM))]
+      second<-indies$indexADM[indies$indexADM!=first][which.min(abs(stillmiss-indies$indexADM[indies$indexADM!=first]))]
+      if(indies$GDLCODE[first]==indies$GDLCODE[second]) {
+        indies%<>%rbind(data.frame(indexADM=mm,indexGDL=indies$indexGDL[first],GDLCODE=indies$GDLCODE[first]))
+        next
+      } else {
+        warning(paste0("GDL admin boundaries didn't pair up with UN ones for ",ADM$ADM2NM[mm]))
+        indies%<>%rbind(data.frame(indexADM=mm,indexGDL=NA,GDLCODE=NA))
+      }
+    }
+  }
+  return(indies)
 }
 
 # 
