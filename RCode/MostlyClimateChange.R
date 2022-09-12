@@ -33,16 +33,17 @@ GetCCPrecip<-function(ADM,ISO,eyear=2050){
     fff<-filers[i]
     year<-yearing[i]
     RPS<-CopNetCDF(pather,fff,ADM,varname="pr")
+    # Note that we convert to kilograms per metre per year
     temporal%<>%rbind(data.frame(ISO3C=unique(ADM$ISO3CD),
                                  year=year,
-                                 Precipitation=mean(RPS$Value,na.rm=T)))
+                                 Precipitation=mean(RPS$Value,na.rm=T)*60*60*24*365))
   }
   
   ind<-which(yearing %in% c(syear,eyear))
     
   sRPS<-CopNetCDF(pather,filers[ind[1]],ADM,varname="pr")
   eRPS<-CopNetCDF(pather,filers[ind[2]],ADM,varname="pr")
-  RPS<-sRPS; RPS$Value<-exp(eRPS$Value-sRPS$Value); rm(sRPS,eRPS)
+  RPS<-sRPS; RPS$Value<-eRPS$Value-sRPS$Value; rm(sRPS,eRPS)
   
   # Resample onto ADM using simple nearest neighbour
   vals<-sapply(1:nrow(RPS), function(i){
@@ -65,9 +66,10 @@ GetCCSurfTemp<-function(ADM,ISO,eyear=2050){
     fff<-filers[i]
     year<-yearing[i]
     RPS<-CopNetCDF(pather,fff,ADM,varname="tas")
+    # Note that we convert from Kelvin to Celcius
     temporal%<>%rbind(data.frame(ISO3C=unique(ADM$ISO3CD),
                                  year=year,
-                                 Temperature=mean(RPS$Value,na.rm=T)))
+                                 Temperature=mean(RPS$Value,na.rm=T)-273.15))
   }
   
   ind<-which(yearing %in% c(syear,eyear))
@@ -99,9 +101,10 @@ GetCCTotRunoff<-function(ADM,ISO,eyear=2050){
     fff<-filers[i]
     year<-yearing[i]
     RPS<-CopNetCDF(pather,fff,ADM,varname="mrro")
+    # Note that we convert to kilograms per metre per year
     temporal%<>%rbind(data.frame(ISO3C=unique(ADM$ISO3CD),
                                  year=year,
-                                 TotRunoff=mean(RPS$Value,na.rm=T)))
+                                 TotRunoff=mean(RPS$Value,na.rm=T)*60*60*24*365))
   }
   
   ind<-which(yearing %in% c(syear,eyear))

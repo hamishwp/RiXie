@@ -83,11 +83,8 @@ GetSeaLevelRise<-function(ADM,ISO){
   Latitude<-ncvar_get(SLR,"station_y_coordinate")
   nc_close(SLR)
   
-  RPSout<-raster(ncol=length(Longitude), nrow=length(Latitude),
-                 xmn=min(Longitude), xmx=max(Longitude),
-                 ymn=min(Latitude), ymx=max(Latitude))
-  values(RPSout)<-RPS
-  RPSout%<>%crop(ext)
+  RPSout<-SpatialPointsDataFrame(data.frame(Longitude=Longitude,Latitude=Latitude),
+                                 data.frame(RPS=RPS))
   
   ADM$ExtrSeaLevel50yr<-RPSout%>%raster::extract(ADM,method='bilinear',na.rm=T,fun=mean)%>%as.numeric()
   

@@ -8,7 +8,7 @@ ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads avai
 
 #@@@@@@@@@@@@@ TO DO LIST @@@@@@@@@@@@@#
 # Find a way 
-for (iso3c in unique(ISO)){
+for (iso3c in unique(ISO)[2:length(unique(ISO))]){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
   Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
@@ -105,9 +105,10 @@ for (iso3c in unique(ISO)){
 }
 
 ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
-                sheetName = "Country RIX Start Dates",as.data.frame = T)%>%pull(ISO3C.Code)
+                sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
+     pull(ISO3C.Code)%>%na.omit()
 CCoverall<-data.frame()
-for (iso3c in unique(ISO)[10:length(ISO)]){
+for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
   Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
@@ -116,7 +117,7 @@ for (iso3c in unique(ISO)[10:length(ISO)]){
   #@@@@@@@ CLIMATE CHANGE @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   tmp<-tryCatch(GetCCPrecip(Dasher,ISO=iso3c),error=function(e) NA)
-  if(any(is.na(tmp))) print(paste0("Error with ",iso3c," UN Maps")); next 
+  if(any(is.na(tmp))) {print(paste0("Error with CC data in ",iso3c)); next}
   CCtable<-tmp$temporal;
   tmp<-GetCCSurfTemp(Dasher,ISO=iso3c)
   CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year"))
@@ -125,7 +126,23 @@ for (iso3c in unique(ISO)[10:length(ISO)]){
   
   CCoverall%<>%rbind(CCtable)
   
-  xlsx::write.xlsx(CCoverall,paste0(dir,"/Results/CC_tables_.xlsx"))
+  xlsx::write.xlsx(CCoverall,paste0(dir,"/Results/CC_tables.xlsx"),showNA = F)
   
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

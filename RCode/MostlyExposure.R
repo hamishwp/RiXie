@@ -76,7 +76,8 @@ GetKummu<-function(dir,ext=NULL,yr=2015L){
 }
 
 GetGDP<-function(ADM,ISO,ext,ncores=2){
-  GDP<-GetKummu(dir,ext,yr=2015L)
+  GDP<-tryCatch(GetKummu(dir,ext,yr=2015L),error=function(e) NA)
+  if(any(is.na(GDP))) return(ADM)
   # Resample onto admin boundaries
   # Aggregate the population data to admin level 2
   GDP%<>%raster%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
