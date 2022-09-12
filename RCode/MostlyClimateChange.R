@@ -11,7 +11,7 @@ CopNetCDF<-function(pather,fff,ADM,varname){
   SLR<-nc_open(paste0(pather,fff))
   RPS<-ncvar_get(SLR,varname)
   lonlat <- as.matrix(expand.grid(ncvar_get(SLR,"lon"),ncvar_get(SLR,"lat")))
-  RPS<-data.frame(Longitude=lonlat[,1],Latitude=lonlat[,2],Value=as.vector(RPS[,,1]))
+  RPS<-data.frame(Longitude=(lonlat[,1]-180),Latitude=lonlat[,2],Value=as.vector(RPS[,,1]))
   nc_close(SLR)
   # Reduce the spatial dimension to only what we need
   ind<-RPS$Longitude>ADM@bbox[1]&

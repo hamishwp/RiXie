@@ -10,10 +10,15 @@ GetUNMaps<-function(ISO){
   ADM <- ADM[ADM@data$ISO3CD ==ISO, ]
   ADM@data%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
   # Calculate the area (in kilometres squared) of each admin boundary region
-  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
+  # ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
   centroids<-rgeos::gCentroid(ADM,byid=TRUE)
   ADM$LONGITUDE<-centroids@coords[,1]
   ADM$LATITUDE<-centroids@coords[,2]
+  # In case the admin level 2 boundaries do not exist, but level 1 do!
+  if(all(is.na(ADM@data[,c("ADM2NM","ADM2CD")])) & !all(is.na(ADM@data[,c("ADM1NM","ADM1CD")]))) {
+    ADM@data$ADM2NM<-ADM@data$ADM1NM
+    ADM@data$ADM2CD<-ADM@data$ADM1CD
+  }
   
   ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 
            !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
@@ -92,19 +97,19 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
   
 }
 
-if(ISO=="MDV"){
-  
-  ADM2$AltName<-"Total"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Haa Alifu","Haa Dhaalu","Shaviyani")]<-"North"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Noonu","Raa","Baa","Lhaviyani")]<-"North Central"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Male'","Kaafu","Alifu Alifu","Alifu Dhaalu","Vaavu")]<-"Male"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Faafu","Dhaalu","Meemu")]<-"Central"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Thaa","Laamu","Gaafu Alifu","Gaafu Dhaalu")]<-"South Central"
-  ADM2$AltName[ADM2$ADM1NM%in%c("Gnaviyani","Seenu")]<-"South"
-
-  ADM2%<>%merge(SHDI,by="AltName")
-  
-}
+# if(ISO=="MDV"){
+#   
+#   ADM2$AltName<-"Total"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Haa Alifu","Haa Dhaalu","Shaviyani")]<-"North"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Noonu","Raa","Baa","Lhaviyani")]<-"North Central"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Male'","Kaafu","Alifu Alifu","Alifu Dhaalu","Vaavu")]<-"Male"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Faafu","Dhaalu","Meemu")]<-"Central"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Thaa","Laamu","Gaafu Alifu","Gaafu Dhaalu")]<-"South Central"
+#   ADM2$AltName[ADM2$ADM1NM%in%c("Gnaviyani","Seenu")]<-"South"
+# 
+#   ADM2%<>%merge(SHDI,by="AltName")
+#   
+# }
 
 
 

@@ -417,7 +417,7 @@ Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
 }
 
 # Go from one set of admin boundaries to another, using the centroids of one of them
-Poly2poly<-function(polyDF,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T){
+Poly2poly<-function(polyDF,ADM,SHDI,sumFn=NULL,index=1,ncores=4,outsiders=T){
   # Find the ADM boundaries that lie within GDL boundaries
   whichin<-sapply(1:length(polyDF@polygons),
               function(i) sapply(1:length(polyDF@polygons[[i]]@Polygons), 

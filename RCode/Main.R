@@ -1,5 +1,5 @@
 # Choose the country you want to work with
-ISO<-"SDN"
+ISO<-c("SDN","CRI","TTO","GUY","SSD","BGD","TJK","AGO","SWA")
 dir<-getwd()
 packred<-F
 source("./RCode/GetPackages.R")
@@ -11,7 +11,8 @@ ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads avai
 for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
-  Dasher<-GetUNMaps(iso3c)
+  Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
+  if(any(is.na(Dasher)) | nrow(Dasher@data)==0) {print(paste0("Error with ",iso3c," UN Maps")); next}
   # Check if landlocked or not:
   Landlocked<-CheckLandLock(iso3c)
   # Bounding box of the country for cropping
@@ -51,7 +52,7 @@ for (iso3c in unique(ISO)){
   #@@@@@@@@@@@ HAZARD @@@@@@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   # Air pollution
-  Dasher%<>%GetAirPollution(ISO=iso3c)
+  Dasher%<>%GetAirPollution(ISO=iso3c,ext=ext)
   # Tropical Cyclones
   Dasher%<>%GetTropCyc(ISO=iso3c,ext=ext)
   # Floods
@@ -90,17 +91,41 @@ for (iso3c in unique(ISO)){
   tmp<-GetCCTotRunoff(Dasher,ISO=iso3c)
   CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM; rm(tmp)
   
+  Dasher@data%<>%dplyr::select(-c(GDLCODE,ADM1CD,ADM2CD,LONGITUDE,LATITUDE))
+  
   # Create a folder for the results
   dir.create(paste0(dir,"/Results/",iso3c),showWarnings = F,recursive = T)
   rgdal::writeOGR(Dasher,
-                  dsn=paste0(dir,"Results/",iso3c,"/ADM_",iso3c),
-                  layer = "map",
+                  dsn=paste0(dir,"/Results/",iso3c,"/ADM_",iso3c),
+                  layer = paste0("/ADM_",iso3c),
                   driver = "ESRI Shapefile",overwrite_layer = T)
   
   xlsx::write.xlsx(CCtable,paste0(dir,"/Results/",iso3c,"/CC_tables_",iso3c,".xlsx"))
   
 }
 
+ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
+                sheetName = "Country RIX Start Dates",as.data.frame = T)%>%pull(ISO3C.Code)
+CCoverall<-data.frame()
+for (iso3c in unique(ISO)[10:length(ISO)]){
+  print(paste0("Currently working on ",convIso3Country(iso3c)))
+  # ADMIN LEVEL BOUNDARIES
+  Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
+  if(all(is.na(Dasher@data)) | nrow(Dasher@data)==0) {print(paste0("Error with ",iso3c," UN Maps")); next}
+  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+  #@@@@@@@ CLIMATE CHANGE @@@@@@@#
+  #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+  tmp<-tryCatch(GetCCPrecip(Dasher,ISO=iso3c),error=function(e) NA)
+  if(any(is.na(tmp))) print(paste0("Error with ",iso3c," UN Maps")); next 
+  CCtable<-tmp$temporal;
+  tmp<-GetCCSurfTemp(Dasher,ISO=iso3c)
+  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year"))
+  tmp<-GetCCTotRunoff(Dasher,ISO=iso3c)
+  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year"))
+  
+  CCoverall%<>%rbind(CCtable)
+  
+  xlsx::write.xlsx(CCoverall,paste0(dir,"/Results/CC_tables_.xlsx"))
+  
+}
 
-
-# For each category, 
