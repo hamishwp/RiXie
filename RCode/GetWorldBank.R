@@ -80,7 +80,7 @@ normaliseWB<-function(ndata,iso,dater,normdate=as.Date("2015-01-01")){
 
 InterpWB<-function(iso3c,date,funcy,normdate=as.Date("2015-01-01")){
   year<-AsYear(date)
-  dataz<-do.call(funcy,list(syear=(year-5),fyear=(AsYear(Sys.Date())-1)))
+  dataz<-do.call(funcy,list(syear=(year-10),fyear=(AsYear(Sys.Date())-1)))
   normaliseWB(dataz,iso = iso3c,dater = date, normdate=normdate)
 }
 InterpPopWB<-function(iso3c,date,normdate=as.Date("2015-01-01")){

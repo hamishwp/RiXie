@@ -52,46 +52,56 @@ for (iso3c in unique(ISO)[2:length(unique(ISO))]){
   #@@@@@@@@@@@ HAZARD @@@@@@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   # Air pollution
-  Dasher%<>%GetAirPollution(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetAirPollution(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Tropical Cyclones
-  Dasher%<>%GetTropCyc(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetTropCyc(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Floods
-  Dasher%<>%GetFloodRisk(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetFloodRisk(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Drought
-  Dasher%<>%GetDrought(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetDrought(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Earthquakes
-  Dasher%<>%GetEarthquakeRisk(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetEarthquakeRisk(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Landslides
-  Dasher%<>%GetLandslide(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetLandslide(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Extreme Heat
-  Dasher%<>%GetExtremeHeat(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetExtremeHeat(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Volcanic Ash
-  Dasher%<>%GetVolcAsh(ISO=iso3c,ext=ext)
+  tmp<-tryCatch(GetVolcAsh(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # Include coastal hazards such as tsunami or sea level rise
   if(!Landlocked){
     # Sea Level Rise data
-    Dasher%<>%GetSeaLevelRise(ISO=iso3c)
+    tmp<-tryCatch(GetSeaLevelRise(Dasher,ISO=iso3c),error=function(e) NA)
+    if(!all(is.na(tmp))) Dasher<-tmp
     # Tsunami Risk
-    Dasher%<>%GetTsunamiRisk(ISO=iso3c,ext=ext)
+    tmp<-tryCatch(GetTsunamiRisk(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+    if(!all(is.na(tmp))) Dasher<-tmp
   }
   
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@@ VULNERABILITY @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   # Sub-national HDI data
-  Dasher%<>%GetSHDI(ISO=iso3c)
-  
+  tmp<-tryCatch(GetSHDI(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@ CLIMATE CHANGE @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
-  tmp<-GetCCPrecip(Dasher,ISO=iso3c)
-  CCtable<-tmp$temporal; Dasher<-tmp$ADM
-  tmp<-GetCCSurfTemp(Dasher,ISO=iso3c)
-  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM
-  tmp<-GetCCTotRunoff(Dasher,ISO=iso3c)
-  CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM; rm(tmp)
+  tmp<-tryCatch(GetCCPrecip(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) {CCtable<-tmp$temporal; Dasher<-tmp$ADM}
+  tmp<-tryCatch(GetCCSurfTemp(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) {CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM}
+  tmp<-tryCatch(GetCCTotRunoff(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) {CCtable%<>%merge(tmp$temporal,by=c("ISO3C","year")); Dasher<-tmp$ADM; rm(tmp)}
   
-  Dasher@data%<>%dplyr::select(-c(GDLCODE,ADM1CD,ADM2CD,LONGITUDE,LATITUDE))
+  Dasher@data%<>%dplyr::select(-c(ADM1CD,ADM2CD,LONGITUDE,LATITUDE))
   
   # Create a folder for the results
   dir.create(paste0(dir,"/Results/",iso3c),showWarnings = F,recursive = T)
