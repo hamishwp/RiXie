@@ -1,5 +1,10 @@
 # Choose the country you want to work with
 ISO<-c("SDN","CRI","TTO","GUY","SSD","BGD","TJK","AGO","SWA")
+
+ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
+                     sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
+  pull(ISO3C.Code)%>%na.omit()
+
 dir<-getwd()
 packred<-F
 source("./RCode/GetPackages.R")
@@ -8,7 +13,7 @@ ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads avai
 
 #@@@@@@@@@@@@@ TO DO LIST @@@@@@@@@@@@@#
 # Find a way 
-for (iso3c in unique(ISO)[2:length(unique(ISO))]){
+for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
   Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
@@ -114,9 +119,6 @@ for (iso3c in unique(ISO)[2:length(unique(ISO))]){
   
 }
 
-ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
-                sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
-     pull(ISO3C.Code)%>%na.omit()
 CCoverall<-data.frame()
 for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
