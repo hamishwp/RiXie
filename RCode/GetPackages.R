@@ -18,6 +18,7 @@ LoadLibraries<-function(packred){
   library(ncdf4)
   library(geodist)
   library(GADMTools)  
+  library(akima)
   
   if(!packred) {
     library(codetools)
@@ -59,7 +60,7 @@ GetRiXiePackages<-function(packred){
   
 }
 
-GetRiXiePackages(packred)
+if(installer) GetRiXiePackages(packred) else LoadLibraries(packred)
 
 source(paste0(dir,"/RCode/GeneralFunctions.R"))
 source(paste0(dir,"/RCode/AdminBoundaries.R"))

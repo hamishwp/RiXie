@@ -15,7 +15,7 @@ Let's check out some basics on the country specified:
 ```{r}
 source("./GeneralFunctions.R")
 # First load the administrative boundaries:
-# SSD<-readRDS("../Data/SSD_ADM.Rdata")
+SSD<-readRDS("../Data/SSD_ADM.Rdata")
 # pop<-as(raster::raster("../Data/ssd_ppp_2020_1km_Aggregated_UNadj.tif"),"SpatialPixelsDataFrame")
 
 # Aggregate population to admin 1 boundary level
@@ -84,8 +84,8 @@ hazd$WF<-Grid2ADM(WF,hpoly,sumFn = "mean")
 EQ<-as(crop(raster::raster("../Data/Hazard/SSD_EQ_GAR2017.tif"),e),"SpatialPixelsDataFrame")
 hazd$EQ<-Grid2ADM(EQ,hpoly,sumFn = "mean")
 
-st_write(hazd,
-         dsn="../Data/SSD_Final",
+st_write(hazd,append = T,
+         dsn="../Data/SSD_Final2",
          layer = "map",
          driver = "ESRI Shapefile")
 

@@ -7,12 +7,13 @@
 # https://cran.r-project.org/web/packages/ecmwfr/ecmwfr.pdf
 
 # Wrangle the NetCDF format data
-CopNetCDF<-function(pather,fff,ADM,varname){
+CopNetCDF<-function(pather,fff,ADM=NULL,varname,lon="lon",lat="lat"){
   SLR<-nc_open(paste0(pather,fff))
   RPS<-ncvar_get(SLR,varname)
-  lonlat <- as.matrix(expand.grid(ncvar_get(SLR,"lon"),ncvar_get(SLR,"lat")))
+  lonlat <- as.matrix(expand.grid(ncvar_get(SLR,lon),ncvar_get(SLR,lat)))
   RPS<-data.frame(Longitude=(lonlat[,1]-180),Latitude=lonlat[,2],Value=as.vector(RPS[,,1]))
   nc_close(SLR)
+  if(is.null(ADM)) return(RPS)
   # Reduce the spatial dimension to only what we need
   ind<-RPS$Longitude>ADM@bbox[1]&
     RPS$Longitude<ADM@bbox[3]&
@@ -21,6 +22,72 @@ CopNetCDF<-function(pather,fff,ADM,varname){
   RPS<-RPS[ind,]
   return(RPS)
 }
+
+# Max Consequtive Dry Days
+GetCDD<-function(ADM,ISO){
+  pather<-paste0(dir,"/Data/ClimateChange/ClimateIndices/")
+  fff<-"cddETCCDI_yr_EC-Earth3_ssp585_r1i1p1f1_no-base_v20200310_2015-2100_v2-0.nc"
+  RPS<-CopNetCDF(pather,fff,ADM,varname="cddETCCDI")
+  
+  vals<-sapply(1:nrow(RPS), function(i){
+    geodist(ADM@data[,c("LONGITUDE","LATITUDE")],RPS[i,1:2])
+  })
+  ADM$MaxConsDryDays<-RPS$Value[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  return(ADM)
+}
+
+# Max Consequtive Wet Days
+GetCWD<-function(ADM,ISO){
+  pather<-paste0(dir,"/Data/ClimateChange/ClimateIndices/")
+  fff<-"cwdETCCDI_yr_EC-Earth3_ssp585_r1i1p1f1_no-base_v20200310_2015-2100_v2-0.nc"
+  RPS<-CopNetCDF(pather,fff,ADM,varname="cwdETCCDI")
+  
+  vals<-sapply(1:nrow(RPS), function(i){
+    geodist(ADM@data[,c("LONGITUDE","LATITUDE")],RPS[i,1:2])
+  })
+  ADM$MaxConsWetDays<-RPS$Value[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  return(ADM)
+}
+
+# Length of Growing Season
+GetLGS<-function(ADM,ISO){
+  pather<-paste0(dir,"/Data/ClimateChange/ClimateIndices/")
+  fff<-"gslETCCDI_yr_EC-Earth3_ssp585_r1i1p1f1_no-base_v20200310_2015-2100_v2-0.nc"
+  RPS<-CopNetCDF(pather,fff,ADM,varname="gslETCCDI")
+  
+  vals<-sapply(1:nrow(RPS), function(i){
+    geodist(ADM@data[,c("LONGITUDE","LATITUDE")],RPS[i,1:2])
+  })
+  ADM$LenGrowSeas<-RPS$Value[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  return(ADM)
+}
+
+# Annual Minimum of Daily Minimum Temperature
+GetMinTemp<-function(ADM,ISO){
+  pather<-paste0(dir,"/Data/ClimateChange/ClimateIndices/")
+  fff<-"tnnETCCDI_yr_EC-Earth3_ssp585_r1i1p1f1_no-base_v20200310_2015-2100_v2-0.nc"
+  RPS<-CopNetCDF(pather,fff,ADM,varname="tnnETCCDI")
+  
+  vals<-sapply(1:nrow(RPS), function(i){
+    geodist(ADM@data[,c("LONGITUDE","LATITUDE")],RPS[i,1:2])
+  })
+  ADM$AnnMinDayMinTemp<-RPS$Value[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  return(ADM)
+}
+
+# Annual Maximum of Daily Maximum Temperature
+GetMaxTemp<-function(ADM,ISO){
+  pather<-paste0(dir,"/Data/ClimateChange/ClimateIndices/")
+  fff<-"txxETCCDI_yr_EC-Earth3_ssp585_r1i1p1f1_no-base_v20200310_2015-2100_v2-0.nc"
+  RPS<-CopNetCDF(pather,fff,ADM,varname="txxETCCDI")
+  
+  vals<-sapply(1:nrow(RPS), function(i){
+    geodist(ADM@data[,c("LONGITUDE","LATITUDE")],RPS[i,1:2])
+  })
+  ADM$AnnMaxDayMaxTemp<-RPS$Value[sapply(1:nrow(vals),function(i) which.min(vals[i,]))]%>%as.numeric()
+  return(ADM)
+}
+
 # Precipitation projections from Copernicus CDS
 GetCCPrecip<-function(ADM,ISO,eyear=2050){
   pather<-paste0(dir,"/Data/ClimateChange/Copernicus_Precip/")

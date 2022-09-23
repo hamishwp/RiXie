@@ -22,13 +22,31 @@ GetInfra<-function(ADM,ISO,ext){
 }
 
 # https://www.eea.europa.eu/data-and-maps/data/global-land-cover-250m
+
+# Land Cover CCI Climate Research Data Package (CRDP)
+# C3S Global Land Cover products available for 2019 
+# https://maps.elie.ucl.ac.be/CCI/viewer/download.php
+# Using "./Data/Exposure/Ecological/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc"
 GetLandCover<-function(ADM,ISO,ext){
-  ecol<-brick(paste0(dir,"/Data/Exposure/Ecological/GLC2000_EU_250m.tif"))
-  projection(ecol)<-"+proj=longlat +datum=WGS84 +no_defs"
-  ecol%<>%crop(ext)
-  # Note we use bilinear interpolation because none of the none-zero values 
-  # will be inside the admin boundaries
-  ADM$BuiltUp<-Infra%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
+  # ecol<-brick(paste0(dir,"/Data/Exposure/Ecological/GLC2000_EU_250m.tif"))
+  file<-paste0(dir,"/Data/Exposure/Ecological/C3S-LC-L4-LCCS-Map-300m-P1Y-2020-v2.1.1.nc")
+  LC<-nc_open(file)
+  LdCov<-brick(file,varname="lccs_class")
+  nc_close(LC)
+  projection(LdCov)<-"+proj=longlat +datum=WGS84 +no_defs"
+  LdCov%<>%crop(ext)%>%as("SpatialPixelsDataFrame")
+  names(LdCov)<-"Class"
+  classes<-read_csv(paste0(dir,"/Data/Exposure/Ecological/LandCoverClassesMapping.csv"),show_col_types = F)
+  # Per grouping of land cover, add a layer
+  for(grp in unique(classes$Group)){
+    tmp<-LdCov; tmp@data$Class<-0
+    tmp$Class[LdCov@data$Class%in%classes$Tag[classes$Group==grp]]<-1
+    # Use in-polygons algorithm to make the average land cover per polygon
+    ADM@data$tmp<-Grid2ADM(tmp,ADM,sumFn=mean,index=1,ncores=1,outsiders=F)
+    # Name it
+    colnames(ADM@data)[ncol(ADM)]<-grp
+  }
+  
   return(ADM)
   
 }

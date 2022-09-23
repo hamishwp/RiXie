@@ -76,7 +76,7 @@ CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
   return(list(filer=filer,locy=locy))
 }
 #@@@@@@@@@@@@@@@@@@@@@@@@@ WORLDPOP POPULATION @@@@@@@@@@@@@@@@@@@@@@@@@@#
-GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./",constrained=T,kmres=T,unadj=T){
+GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T){
   # Try to download the most recent dataset
   if(is.null(year)) {year<-AsYear(Sys.Date()); mostrecent<-T} else mostrecent<-F
   # If we left the year blank, then let's search for the most recent CONSTRAINED dataset
@@ -108,20 +108,27 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./",constrained=T,kmres=T,una
 # Extract population data and put the conflict data onto the grid
 GetPop<-function(ISO,ADM,ncores=2){
   FullADM<-data.frame()
-    # Get the WorldPop data
-    pop<-GetWorldPopISO3C(iso3c,2020,folder="./",constrained=T,kmres=T,unadj=T)
+  # Get the WorldPop data
+  if(length(list.files("./Data/Exposure/PopDemo/",ISO))==0){
+    pop<-GetWorldPopISO3C(ISO,2020,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T)
     names(pop)[1]<-"POPULATION"
-    # Aggregate the population data to admin level 2
-    popvec<-Grid2ADM(pop,
-                     ADM[ADM@data$ISO3C==ISO,],
-                     sumFn="sum",
-                     index = which(names(pop)=="POPULATION"),
-                     ncores = ncores)
-    # Scale to make sure that the value is current
-    popvec$all<-popvec$all*InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
-    # Combine into one large data.frame
-    ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
-    return(ADM)
+  } else {
+    pop<-raster(paste0("./Data/Exposure/PopDemo/",
+                       list.files("./Data/Exposure/PopDemo/",ISO)))%>%
+    as("SpatialPixelsDataFrame")
+    names(pop@data)[1]<-"POPULATION"
+  }
+  # Aggregate the population data to admin level 2
+  popvec<-Grid2ADM(pop,
+                   ADM[ADM@data$ISO3C==ISO,],
+                   sumFn="sum",
+                   index = which(names(pop)=="POPULATION"),
+                   ncores = ncores)
+  # Scale to make sure that the value is current
+  popvec$all<-popvec$all*InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
+  # Combine into one large data.frame
+  ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
+  return(ADM)
 }
 
 GetDemog<-function(Dasher,ISO){

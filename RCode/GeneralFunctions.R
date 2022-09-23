@@ -558,14 +558,20 @@ Interp2GRID<-function(GridSF,IntData){
   
 }
 
-InterpOnPolygons<-function(TS,ADM2){
-  
-  # This algorithm depends on the input data:
-  # 1) if the admin polygon long&lat distances are larger than the raster grid
-  #    then should take the mean values of all grid cells within polygon
-  tmp<-TS%>%raster%>%raster::extract(ADM2,method='bilinear',fun=mean)
-  # 2) if the distances are smaller, cubic spline interpolate values onto the centroids
-  # 3) if the two datasets are gridded, use 
-  
+InterpOn<-function(FromDF,ToDF,namer="tmp",ext=NULL){
+  # Crop the data only to fit a certain area
+  if(!is.null(ext)) FromDF%<>%crop(ext)
+  # Interpolation depends on the comparative spatial resolution of the two datasets
+  if(prod(FromDF@grid@cells.dim)>prod(ToDF@grid@cells.dim)){
+    # Nearest neighbour
+    ToDF@data$tmp<-FromDF%>%raster::extract(ToDF,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
+  } else {
+    # Bicubic spline interpolation
+    FL%<>%as("SpatialPixelsDataFrame")
+    ToDF@data$tmp<-interp::interp(x = FromDF@coords[,1],y=FromDF@coords[,2],z = FromDF@data[,1],
+                xo=ToDF@coords[,1],yo=ToDF@coords[,2],linear = T,output="points")
+  }
+  names(ToDF@data)[ncol(ToDF@data)]<-namer
+  return(ToDF)
 }
 

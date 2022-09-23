@@ -4,18 +4,18 @@
 # Flood hazard map (100 year return period)
 # https://data.europa.eu/data/datasets/jrc-floods-floodmapgl_rp100y-tif?locale=en
 GetFloodRisk<-function(ADM,ISO,ext){
-  
   FL<-brick(paste0(dir,"/Data/Hazard/floodMapGL_rp100y.tif"))
   projection(FL)<-"+proj=longlat +datum=WGS84 +no_defs"
-  FL%<>%crop(ext)
-  # Combine into one large data.frame
+  # Interpolate onto the population grid
+  pop%<>%InterpOn(FromDF=FL,namer="tmp",ext)
+  # Interpolate onto the admin level polygons
   ADM$FL100yr<-FL%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
   return(ADM)
 }
 
 # https://datacatalog.worldbank.org/search/dataset/0037584/Global-landslide-hazard-map
 GetLandslide<-function(ADM,ISO,ext){
-  LS<-raster(paste0(dir,"/Data/Hazard/pga_475y.tif"))
+  LS<-raster(paste0(dir,"/Data/Hazard/LS_EQ.tif"))
   projection(LS)<-"+proj=longlat +datum=WGS84 +no_defs"
   LS%<>%crop(ext)
   # Combine into one large data.frame

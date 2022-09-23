@@ -6,10 +6,10 @@ ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
   pull(ISO3C.Code)%>%na.omit()
 
 dir<-getwd()
-packred<-F
+packred<-T; installer<-F
 source("./RCode/GetPackages.R")
 # Parallelise the workload
-ncores<-4; if(detectCores()<ncores) stop("You don't have enough CPU threads available, reduce ncores")
+ncores<-1; if(detectCores()<ncores) stop("You don't have enough CPU threads available, reduce ncores")
 
 #@@@@@@@@@@@@@ TO DO LIST @@@@@@@@@@@@@#
 # Find a way 
@@ -21,7 +21,7 @@ for (iso3c in unique(ISO)){
   # Check if landlocked or not:
   Landlocked<-CheckLandLock(iso3c)
   # Bounding box of the country for cropping
-  ext <- GetExtent(Dasher,expander=1.1)
+  ext <- GetExtent(Dasher,expander=1.5)
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@@@@ EXPOSURE @@@@@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -30,7 +30,8 @@ for (iso3c in unique(ISO)){
   # Female, Over 64 & Under 14 population
   Dasher%<>%GetDemog(ISO=iso3c)
   # Forest Cover
-  
+  tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   # GDP-PPP Per Capita
   Dasher%<>%GetGDP(ISO=iso3c,ext=ext)
   # Built-up Surface - GHSL
@@ -99,6 +100,17 @@ for (iso3c in unique(ISO)){
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@ CLIMATE CHANGE @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
+  tmp<-tryCatch(GetCDD(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetCWD(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetLGS(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetMinTemp(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetMaxTemp(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  
   tmp<-tryCatch(GetCCPrecip(Dasher,ISO=iso3c),error=function(e) NA)
   if(!all(is.na(tmp))) {CCtable<-tmp$temporal; Dasher<-tmp$ADM}
   tmp<-tryCatch(GetCCSurfTemp(Dasher,ISO=iso3c),error=function(e) NA)
@@ -143,12 +155,60 @@ for (iso3c in unique(ISO)){
 }
 
 
+ISO<-list.files("./Results/"); ISO<-ISO[!ISO%in%c("CC_tables.csv","CC_tables.xlsx")]
+for (iso3c in unique(ISO)){
+  print(paste0("Currently working on ",convIso3Country(iso3c)))
+  file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/ADM_",iso3c,".shp")
+  Dasher<-st_read(file)%>%as("Spatial")
+  ext <- GetExtent(Dasher,expander=1.5)
+  tmp<-tryCatch(GetLandslide(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher$LS<-tmp$LS
+  # tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  # if(!all(is.na(tmp))) Dasher<-tmp
+  centroids<-GetUNMaps(iso3c)
+  Dasher$LONGITUDE<-centroids$LONGITUDE
+  Dasher$LATITUDE<-centroids$LATITUDE
+  rm(centroids)
+  tmp<-tryCatch(GetCDD(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetCWD(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetLGS(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetMinTemp(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetMaxTemp(Dasher,ISO=iso3c),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
+  
+  if(is.null(Dasher$Tsunami)) Dasher$Tsunami<-NA
+  
+  Dasher@data%<>%dplyr::select(-c(LONGITUDE,LATITUDE))
+  
+  dir.create(paste0(dir,"/Results_V2/",iso3c),showWarnings = F,recursive = T)
+  rgdal::writeOGR(Dasher,
+                  dsn=paste0(dir,"/Results_V2/",iso3c,"/ADM_",iso3c),
+                  layer = paste0("/ADM_",iso3c),
+                  driver = "ESRI Shapefile",overwrite_layer = T)
+  
+}
 
-
-
-
-
-
+# Number 2 has the full 36 elements
+iso3c<-unique(ISO[2])
+file<-paste0("./Results_V2/",iso3c,"/ADM_",iso3c,"/_ADM_",iso3c,".shp")
+Fuller<-st_read(file)
+for (iso3c in unique(ISO)[c(1,3:length(unique(ISO)))]){
+  file<-paste0("./Results_V2/",iso3c,"/ADM_",iso3c,"/_ADM_",iso3c,".shp")
+  Dasher<-st_read(file)
+  for(coly in names(Fuller)[!names(Fuller)%in%names(Dasher)]){
+    Dasher$tmp<-NA
+    names(Dasher)[ncol(Dasher)]<-coly
+  }
+  Fuller%<>%rbind(Dasher)
+}
+rgdal::writeOGR(as(Fuller,"Spatial"),
+                dsn=paste0(dir,"/Results_V2/Full"),
+                layer = "/ADM_Full",
+                driver = "ESRI Shapefile",overwrite_layer = T)
 
 
 
