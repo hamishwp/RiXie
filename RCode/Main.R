@@ -160,11 +160,11 @@ for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/ADM_",iso3c,".shp")
   Dasher<-st_read(file)%>%as("Spatial")
-  ext <- GetExtent(Dasher,expander=1.5)
+  ext <- GetExtent(Dasher,expander=1.)
   tmp<-tryCatch(GetLandslide(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
   if(!all(is.na(tmp))) Dasher$LS<-tmp$LS
-  # tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
-  # if(!all(is.na(tmp))) Dasher<-tmp
+  tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
+  if(!all(is.na(tmp))) Dasher<-tmp
   centroids<-GetUNMaps(iso3c)
   Dasher$LONGITUDE<-centroids$LONGITUDE
   Dasher$LATITUDE<-centroids$LATITUDE
@@ -210,11 +210,9 @@ rgdal::writeOGR(as(Fuller,"Spatial"),
                 layer = "/ADM_Full",
                 driver = "ESRI Shapefile",overwrite_layer = T)
 
-
-
-
-
-
+RPS<-data.frame()
+for (iso3c in unique(ISO))  RPS%<>%rbind(GetMonthlies(iso3c))
+write_csv(RPS,"./Results_V2/MonthlyClimate.csv")
 
 
 

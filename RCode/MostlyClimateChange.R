@@ -189,3 +189,57 @@ GetCCTotRunoff<-function(ADM,ISO,eyear=2050){
   
   return(list(ADM=ADM,temporal=temporal))
 }
+
+# Wrangle the NetCDF format data
+MonthCopNetCDF<-function(pather,fff,ADM,varname,multiplier=1){
+  SLR<-nc_open(paste0(pather,fff))
+  RPS<-ncvar_get(SLR,varname)
+  lon <- ncvar_get(SLR,"lon")
+  lat <- ncvar_get(SLR,"lat")
+  time<- ncvar_get(SLR,"average_T1") + 0.5*ncvar_get(SLR,"average_DT")
+  nc_close(SLR)
+  imnlo<-which.min(abs(lon-mean(ADM@data$LONGITUDE)))
+  imnla<-which.min(abs(lat-mean(ADM@data$LATITUDE)))
+  RPS<-RPS[imnlo,imnla,]
+  RPS<-data.frame(ISO=unique(ADM@data$ISO3CD),
+                  Variable=varname, Value=RPS*multiplier,
+                  iMonth=AsMonth(as.Date("2006-01-01")+time),
+                  Year=AsYear(as.Date("2006-01-01")+time))
+  RPS$Month<-factor(RPS$iMonth,levels = 1:12,
+                     labels=c("January","February","March","April","May","June","July","August","September","October","November","December"))
+  RPS%>%group_by(Month)%>%summarise(ISO=ISO,Variable=varname,iMonth=iMonth,
+                                    minVal=min(Value),
+                                    maxVal=max(Value),
+                                    meanVal=mean(Value),.groups="drop")
+}
+
+GetMonthlies<-function(ISO){
+  ADM<-GetUNMaps(ISO)
+  pather<-paste0(dir,"/Data/ClimateChange/MonthlyClimate/")
+  # Total Runoff
+  fff<-"mrro_Lmon_GFDL-ESM2M_rcp85_r1i1p1_201601-202012.nc"
+  RPS<-MonthCopNetCDF(pather,fff,ADM,varname="mrro",multiplier=60*60*24*365)
+  # Soil Moisture
+  fff<-"mrsos_Lmon_GFDL-ESM2M_rcp85_r1i1p1_201601-202012.nc"
+  RPS%<>%rbind(MonthCopNetCDF(pather,fff,ADM,varname="mrsos",multiplier=1/1000))
+  # Precipitation
+  fff<-"pr_Amon_GFDL-ESM2M_rcp85_r1i1p1_201601-202012.nc"
+  RPS%<>%rbind(MonthCopNetCDF(pather,fff,ADM,varname="pr",multiplier=60*60*24*365))
+  # Surface Wind Speed
+  fff<-"sfcWind_Amon_GFDL-ESM2M_rcp85_r1i1p1_201601-202012.nc"
+  RPS%<>%rbind(MonthCopNetCDF(pather,fff,ADM,varname="sfcWind",multiplier=1))
+  # Near-Surface Air Temperature
+  fff<-"tas_Amon_GFDL-ESM2M_rcp85_r1i1p1_201601-202012.nc"
+  tmp<-MonthCopNetCDF(pather,fff,ADM,varname="tas")
+  tmp[,5:7]<-tmp[,5:7]-273.15
+  RPS%<>%rbind(tmp)
+  return(RPS)
+}
+
+
+
+
+
+
+
+

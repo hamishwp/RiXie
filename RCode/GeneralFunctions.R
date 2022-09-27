@@ -382,7 +382,14 @@ inPoly<-function(poly,pop,iii=1,sumFn="sum"){
 }
 # Aggregate gridded data onto a polygon
 Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
-  outer<-mclapply(1:length(ADM@polygons), function(j) inPoly(ADM@polygons[[j]],pop,index,sumFn=sumFn), mc.cores = ncores)
+  outer<-mclapply(1:length(ADM@polygons), 
+                  function(j) {
+                    iii<-coords[,1]>=min(poly@Polygons[[i]]@coords[,1]) &
+                      coords[,1]<=max(poly@Polygons[[i]]@coords[,1]) &
+                      coords[,2]>=min(poly@Polygons[[i]]@coords[,2]) &
+                      coords[,2]<=max(poly@Polygons[[i]]@coords[,2])
+                    inPoly(ADM@polygons[[j]],pop,index,sumFn=sumFn)
+                  }, mc.cores = ncores)
   vals<-c(); indies<-rep(F,nrow(pop))
   for(i in 1:length(outer)) {
     vals%<>%c(outer[[i]]$vals)
