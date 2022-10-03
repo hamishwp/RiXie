@@ -52,20 +52,35 @@ GetSHDIadmin<-function(ISO){
 }
 
 # Load the administrative boundaries at level 2 from GADM
-ExtractADM<-function(ISO){
+GetGADM<-function(ISO){
   ADM<-gadm_sp_loadCountries(
     unique(ISO),
     level = 2,
     basefile="./Data"
   )
   ADM<-ADM$spdf
-  ADM@data%<>%dplyr::select(GID_0,NAME_0,GID_2,NAME_2)
-  names(ADM)<-c("ISO3C","Country","ADM2_code","ADM2_name")
+  ADM@data%<>%dplyr::select(GID_0,NAME_1,NAME_2,GID_1,GID_2)
+  names(ADM)<-c("ISO3CD","ADM1NM","ADM2NM","ADM1CD","ADM2CD")
   # Calculate the area (in kilometres squared) of each admin boundary region
   ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
   centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
   ADM$LONGITUDE<-centroids[,1]
   ADM$LATITUDE<-centroids[,2]
+  ADM@bbox[]<-c(min(ADM$LONGITUDE),
+              min(ADM$LATITUDE),
+              max(ADM$LONGITUDE),
+              max(ADM$LATITUDE))
+  return(ADM)
+}
+
+ADMexceptions<-function(ADM){
+  
+  if(ADM$ISO3CD[1]=="ETH"){
+    ADM@polygons[[8]]@Polygons[[3]]<-NULL
+    ADM@polygons[[8]]@Polygons[[2]]<-NULL
+    ADM@polygons[[8]]@plotOrder<-c(1L)
+  }
+    
   return(ADM)
 }
 

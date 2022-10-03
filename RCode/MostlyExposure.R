@@ -42,7 +42,7 @@ GetLandCover<-function(ADM,ISO,ext){
     tmp<-LdCov; tmp@data$Class<-0
     tmp$Class[LdCov@data$Class%in%classes$Tag[classes$Group==grp]]<-1
     # Use in-polygons algorithm to make the average land cover per polygon
-    ADM@data$tmp<-Grid2ADM(tmp,ADM,sumFn=mean,index=1,ncores=1,outsiders=F)
+    ADM@data$tmp<-Grid2ADM(tmp,ADM,sumFn="mean",index=1,ncores=1,outsiders=F)
     # Name it
     colnames(ADM@data)[ncol(ADM)]<-grp
   }
@@ -104,7 +104,9 @@ GetGDP<-function(ADM,ISO,ext,ncores=2){
     warning(paste0("Only one GDP value was present in the Kummu dataset for ",convIso3Country(ISO)))
     GDP<-as.numeric(names(which.max(table(GDP))))
   }
-  GDP<-GDP*InterpGDPWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
+  
+  factor<-tryCatch(InterpGDPWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor,error=function(e) NA)
+  GDP<-GDP*ifelse(is.na(factor),1,factor)
   # Combine into one large data.frame
   ADM@data%<>%cbind(data.frame(GDP=GDP))
   return(ADM)

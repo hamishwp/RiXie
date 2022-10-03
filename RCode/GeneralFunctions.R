@@ -349,7 +349,12 @@ extractPolyCoords<-function(ADM){
   return(coords)
 }
 # Find which coordinates of an S4 spatial object lie inside (or on the boundary of) a spatial polygon file
-inPoly<-function(poly,pop,iii=1,sumFn="sum"){
+inPoly<-function(poly,pop,iii=1,sumFn="sum",reducer=NULL){
+  
+  Ifin<-rep(F,nrow(pop@data))
+  if(is.null(reducer)) reducer<-!Ifin
+  
+  pop<-pop[reducer,]
   
   if(any(class(pop)=="SpatialPointsDataFrame") | any(class(pop)=="SpatialPixelsDataFrame")){
     coords<-pop@coords
@@ -378,22 +383,34 @@ inPoly<-function(poly,pop,iii=1,sumFn="sum"){
   }
   
   outer<-match.fun(sumFn)(data[insidepoly,iii],na.rm=T)
-  return(list(vals=outer,indies=insidepoly))
+  
+  Ifin[reducer]<-insidepoly
+  
+  return(list(vals=outer,indies=Ifin))
 }
 # Aggregate gridded data onto a polygon
-Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
+Grid2ADM<-function(pop,ADM,sumFn="sum",index=1,ncores=4,outsiders=T)  {
+  
   outer<-mclapply(1:length(ADM@polygons), 
                   function(j) {
-                    iii<-coords[,1]>=min(poly@Polygons[[i]]@coords[,1]) &
-                      coords[,1]<=max(poly@Polygons[[i]]@coords[,1]) &
-                      coords[,2]>=min(poly@Polygons[[i]]@coords[,2]) &
-                      coords[,2]<=max(poly@Polygons[[i]]@coords[,2])
-                    inPoly(ADM@polygons[[j]],pop,index,sumFn=sumFn)
+                    funcy<-function(cccs,cind,extrF) vapply(1:length(cccs@polygons[[j]]@Polygons),
+                                                            function(i) match.fun(extrF)(cccs@polygons[[j]]@Polygons[[i]]@coords[,cind],na.rm=T),
+                                                            numeric(1))
+                    # Find the bounding box for this polygon to minimise computation
+                    bbox<-c(funcy(ADM,1,"min"),
+                            funcy(ADM,2,"min"),
+                            funcy(ADM,1,"max"),
+                            funcy(ADM,2,"max"))
+                    iii<-pop@coords[,1]>=bbox[1] &
+                      pop@coords[,1]<=bbox[3] &
+                      pop@coords[,2]>=bbox[2] &
+                      pop@coords[,2]<=bbox[4]
+                    inPoly(ADM@polygons[[j]],pop,index,sumFn=sumFn,reducer=iii)
                   }, mc.cores = ncores)
   vals<-c(); indies<-rep(F,nrow(pop))
   for(i in 1:length(outer)) {
     vals%<>%c(outer[[i]]$vals)
-    indies<- indies | outer[[i]]$indie
+    indies<- indies | outer[[i]]$indies
   }
   if(!outsiders) return(vals)
   # Add the values that were not found inside a polygon
@@ -404,12 +421,14 @@ Grid2ADM<-function(pop,ADM,sumFn=NULL,index=1,ncores=4,outsiders=T)  {
     coords<-as.data.frame(pop[,c("LONGITUDE","LATITUDE")])
     data<-as.data.frame(pop)
   }
-  warning(paste0(round(100*(1-match.fun(sumFn)(data[indies,index],na.rm=T)/match.fun(sumFn)(data[,index],na.rm=T)),digits = 2),"% of values that were not inside any polygon, adding them to nearest polygon now "))
+  percy<-round(100*(1-match.fun(sumFn)(data[indies,index],na.rm=T)/match.fun(sumFn)(data[,index],na.rm=T)),digits = 2)
+  if(percy>15) stop(paste0(percy,"% of values were not inside any polygon"))
+  warning(paste0(percy,"% of values were not inside any polygon, adding them to nearest polygon now "))
   # Now to catch the annoying values that weren't located inside any of the polygons!
   # make a dataframe full of the coordinates of the polygons and indices of the corresponding polygon
   polycoords<-extractPolyCoords(ADM)
-  # Make sure that the distance is not more than 2 grid cells away:
-  mdistie<-sqrt(sum(pop@grid@cellsize^2))
+  # Make sure that the distance is not more than 4 grid cells away:
+  mdistie<-sqrt(sum(pop@grid@cellsize^2))*4
   mind<-kk<-valmis<-0; vals_s<-vals
   for(i in which(!indies)) {
     # Find the closest polygon

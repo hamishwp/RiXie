@@ -68,7 +68,7 @@ CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
     print("No BGSM data for WorldPop, trying for Maxar datasets")
     # If error, try the maxar-based population data
     url<-WorldPopURL(iso3c,year,constrained,kmres,unadj,BGSM = F)
-    checker<-tryCatch(download.file(url,locy),error = function(e) NA)
+    checker<-tryCatch(download.file(url,locy, mode="wb"),error = function(e) NA)
     if(is.na(checker)) stop("Worldpop file not found, please check the WorldPop API address and your input iso3c & year")
     
   } 
@@ -106,8 +106,7 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",con
 
 ####################### GRIDDED WORLDPOP #######################
 # Extract population data and put the conflict data onto the grid
-GetPop<-function(ISO,ADM,ncores=2){
-  FullADM<-data.frame()
+GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
   # Get the WorldPop data
   if(length(list.files("./Data/Exposure/PopDemo/",ISO))==0){
     pop<-GetWorldPopISO3C(ISO,2020,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T)
@@ -123,9 +122,11 @@ GetPop<-function(ISO,ADM,ncores=2){
                    ADM[ADM@data$ISO3C==ISO,],
                    sumFn="sum",
                    index = which(names(pop)=="POPULATION"),
-                   ncores = ncores)
+                   ncores = ncores,
+                   outsiders=outsiders)
   # Scale to make sure that the value is current
-  popvec$all<-popvec$all*InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor
+  factor<-tryCatch(InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor,error=function(e) NA)
+  popvec$all<-popvec$all*ifelse(is.na(factor),1,factor)
   # Combine into one large data.frame
   ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
   return(ADM)

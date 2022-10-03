@@ -6,8 +6,9 @@
 GetFloodRisk<-function(ADM,ISO,ext){
   FL<-brick(paste0(dir,"/Data/Hazard/floodMapGL_rp100y.tif"))
   projection(FL)<-"+proj=longlat +datum=WGS84 +no_defs"
+  FL%<>%crop(ext)
   # Interpolate onto the population grid
-  pop%<>%InterpOn(FromDF=FL,namer="tmp",ext)
+  # pop%<>%InterpOn(FromDF=FL,namer="tmp",ext)
   # Interpolate onto the admin level polygons
   ADM$FL100yr<-FL%>%raster::extract(ADM,method='bilinear',fun=mean,na.rm=T)%>%as.numeric()
   return(ADM)
