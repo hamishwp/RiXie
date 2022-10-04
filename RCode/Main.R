@@ -139,14 +139,14 @@ for (iso3c in unique(ISO)){
 ######################################################################
 ######################## COMBINE SPATIAL DATA ########################
 ######################################################################
-ISO<-list.files("./Results_V2/"); ISO<-ISO[!ISO%in%c("CC_tables.csv","CC_tables.xlsx","Full","Full.zip","MonthlyClimate.csv","MonthlyClimateV2.csv")]
+ISO<-list.files("./Results/"); ISO<-ISO[!ISO%in%c("CC_tables.csv","CC_tables.xlsx","Full","Full.zip","MonthlyClimate.csv","MonthlyClimateV2.csv")]
 # Number 2 has the full 36 elements
 iso3c<-unique(ISO[1])
-file<-paste0("./Results_V2/",iso3c,"/ADM_",iso3c,"/_ADM_",iso3c,".shp")
+file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/_ADM_",iso3c,".shp")
 Fuller<-st_read(file)
 for (iso3c in unique(ISO)[c(2,3:length(unique(ISO)))]){
-  file<-paste0("./Results_V2/",iso3c,"/",
-               grep("shp",list.files(paste0("./Results_V2/",iso3c),recursive = T),value=T))
+  file<-paste0("./Results/",iso3c,"/",
+               grep("shp",list.files(paste0("./Results/",iso3c),recursive = T),value=T))
   Dasher<-st_read(file)
   for(coly in names(Fuller)[!names(Fuller)%in%names(Dasher)]){
     Dasher$tmp<-NA
@@ -156,7 +156,7 @@ for (iso3c in unique(ISO)[c(2,3:length(unique(ISO)))]){
   Fuller%<>%rbind(Dasher)
 }
 rgdal::writeOGR(as(Fuller,"Spatial"),
-                dsn=paste0(dir,"/Results_V2/Full"),
+                dsn=paste0(dir,"/Results/Full"),
                 layer = "/ADM_Full",
                 driver = "ESRI Shapefile",overwrite_layer = T)
 
