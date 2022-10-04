@@ -9,8 +9,9 @@ ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
                      sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
   pull(ISO3C.Code)%>%na.omit()
 
-#@@@@@@@@@@@@@ TO DO LIST @@@@@@@@@@@@@#
-# Find a way 
+######################################################################
+############################ SPATIAL DATA ############################
+######################################################################
 for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
@@ -135,6 +136,33 @@ for (iso3c in unique(ISO)){
   
 }
 
+######################################################################
+######################## COMBINE SPATIAL DATA ########################
+######################################################################
+ISO<-list.files("./Results_V2/"); ISO<-ISO[!ISO%in%c("CC_tables.csv","CC_tables.xlsx","Full","Full.zip","MonthlyClimate.csv","MonthlyClimateV2.csv")]
+# Number 2 has the full 36 elements
+iso3c<-unique(ISO[1])
+file<-paste0("./Results_V2/",iso3c,"/ADM_",iso3c,"/_ADM_",iso3c,".shp")
+Fuller<-st_read(file)
+for (iso3c in unique(ISO)[c(2,3:length(unique(ISO)))]){
+  file<-paste0("./Results_V2/",iso3c,"/",
+               grep("shp",list.files(paste0("./Results_V2/",iso3c),recursive = T),value=T))
+  Dasher<-st_read(file)
+  for(coly in names(Fuller)[!names(Fuller)%in%names(Dasher)]){
+    Dasher$tmp<-NA
+    names(Dasher)[ncol(Dasher)]<-coly
+  }
+  Dasher%<>%dplyr::select(names(Fuller))
+  Fuller%<>%rbind(Dasher)
+}
+rgdal::writeOGR(as(Fuller,"Spatial"),
+                dsn=paste0(dir,"/Results_V2/Full"),
+                layer = "/ADM_Full",
+                driver = "ESRI Shapefile",overwrite_layer = T)
+
+######################################################################
+######################## YEARLY CLIMATE DATA #########################
+######################################################################
 CCoverall<-data.frame()
 for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
@@ -158,63 +186,9 @@ for (iso3c in unique(ISO)){
   
 }
 
-
-ISO<-list.files("./Results/"); ISO<-ISO[!ISO%in%c("CC_tables.csv","CC_tables.xlsx","Full","Full.zip","MonthlyClimate.csv","MonthlyClimateV2.csv")]
-for (iso3c in unique(ISO)){
-  print(paste0("Currently working on ",convIso3Country(iso3c)))
-  file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/ADM_",iso3c,".shp")
-  Dasher<-st_read(file)%>%as("Spatial")
-  ext <- GetExtent(Dasher,expander=1.)
-  tmp<-tryCatch(GetLandslide(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher$LS<-tmp$LS
-  tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  centroids<-GetUNMaps(iso3c)
-  Dasher$LONGITUDE<-centroids$LONGITUDE
-  Dasher$LATITUDE<-centroids$LATITUDE
-  rm(centroids)
-  tmp<-tryCatch(GetCDD(Dasher,ISO=iso3c),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  tmp<-tryCatch(GetCWD(Dasher,ISO=iso3c),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  tmp<-tryCatch(GetLGS(Dasher,ISO=iso3c),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  tmp<-tryCatch(GetMinTemp(Dasher,ISO=iso3c),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  tmp<-tryCatch(GetMaxTemp(Dasher,ISO=iso3c),error=function(e) NA)
-  if(!all(is.na(tmp))) Dasher<-tmp
-  
-  if(is.null(Dasher$Tsunami)) Dasher$Tsunami<-NA
-  
-  Dasher@data%<>%dplyr::select(-c(LONGITUDE,LATITUDE))
-  
-  dir.create(paste0(dir,"/Results/",iso3c),showWarnings = F,recursive = T)
-  rgdal::writeOGR(Dasher,
-                  dsn=paste0(dir,"/Results/",iso3c,"/ADM_",iso3c),
-                  layer = paste0("/ADM_",iso3c),
-                  driver = "ESRI Shapefile",overwrite_layer = T)
-  
-}
-
-# Number 2 has the full 36 elements
-iso3c<-unique(ISO[1])
-file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/ADM_",iso3c,".shp")
-Fuller<-st_read(file)
-for (iso3c in unique(ISO)[c(2,3:length(unique(ISO)))]){
-  file<-paste0("./Results/",iso3c,"/ADM_",iso3c,"/ADM_",iso3c,".shp")
-  Dasher<-st_read(file)
-  for(coly in names(Fuller)[!names(Fuller)%in%names(Dasher)]){
-    Dasher$tmp<-NA
-    names(Dasher)[ncol(Dasher)]<-coly
-  }
-  Dasher%<>%dplyr::select(names(Fuller))
-  Fuller%<>%rbind(Dasher)
-}
-rgdal::writeOGR(as(Fuller,"Spatial"),
-                dsn=paste0(dir,"/Results/Full"),
-                layer = "/ADM_Full",
-                driver = "ESRI Shapefile",overwrite_layer = T)
-
+######################################################################
+######################## MONTHLY CLIMATE DATA ########################
+######################################################################
 RPS<-data.frame()
 for (iso3c in unique(ISO))  RPS%<>%rbind(GetMonthlies(iso3c))
 write_csv(RPS,"./Results/MonthlyClimate.csv")
