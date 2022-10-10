@@ -49,7 +49,7 @@ GetWBInfra<-function(syear,fyear){
 #   theme(plot.title = element_text(hjust = 0.5))
 
 normaliseWB<-function(ndata,iso,dater,normdate=as.Date("2015-01-01")){
-  
+
   mindate<-min(ndata$date)
   ndata%<>%filter(iso3%in%iso&!is.na(value))%>%mutate(day=as.numeric(date-min(date)))
   # if(length(ndata$value)<=1) return(data.frame(iso3=iso,factor=1.))
@@ -92,11 +92,11 @@ InterpGDPWB<-function(iso3c,date,normdate=as.Date("2015-01-01")){
 
 
 GetWB_Vals<-function(DispData){
-  
+
   fresh_indicators <- wb_indicators()
   # View(fresh_indicators)
   # write_csv(fresh_indicators[,1:4],"./IIDIPUS_Input/WB_Indicators.csv")
-  
+
   srcs<-c(
     "Gender Statistics",
     "Global Financial Development",
@@ -111,26 +111,26 @@ GetWB_Vals<-function(DispData){
   indies<-fresh_indicators%>%filter(source%in%srcs)
   # write_csv(indies[1:5],"./IIDIPUS_Input/WB-WorldDevelopment_Indicators.csv")
   # View(indies)
-  
+
   syear<-AsYear(min(as.Date(DispData$sdate)))-5
   fyear<-AsYear(max(as.Date(DispData$sdate)))
-  
+
   nn<-ceiling(nrow(indies)/10)
   for (i in 0:(nn-1)){
     iii<-1:10+i*10
     if(max(iii)>nrow(indies)) iii<-(i*10+1):nrow(indies)
     inds<-indies$indicator_id[iii]
-    
-    dataz<-wb_data(indicator = inds, 
-                   start_date = as.character(syear), 
+
+    dataz<-wb_data(indicator = inds,
+                   start_date = as.character(syear),
                    end_date = as.character(fyear),
                    date_as_class_date = T) %>%
       filter(iso3c%in%DispData$iso3) %>% dplyr::select(-c(iso2c,country,obs_resolution))
-    
+
     if(i==0) CORY<-dataz else CORY%<>%cbind(dataz[3:(ncol(dataz)-1)])
-    
-  } 
-  
+
+  }
+
   val<-data.frame()
   for(ev in unique(DispData$event_id)){
     subs<-DispData%>%filter(event_id==ev)
@@ -148,10 +148,10 @@ GetWB_Vals<-function(DispData){
           id<-which(!is.na(value[,2]))
           vv<-value[id,2]
           val%<>%rbind(data.frame(eventid=ev,iso3=is,date=dater,npoints=1,
-                                  indicator=inds,intrpval=vv,nearval=vv,neardate=value[id,1],intrpsuc=F)) 
+                                  indicator=inds,intrpval=vv,nearval=vv,neardate=value[id,1],intrpsuc=F))
           next
         } else {
-          
+
           value%<>%mutate(day=as.numeric(date-min(date)))
           id<-which.min(abs(value$date-dater))
           func = tryCatch(splinefun(x=value$day,y=value[,2], method="natural"),error = function(e) NULL)
@@ -171,8 +171,60 @@ GetWB_Vals<-function(DispData){
       }
     }
   }
-  
+
   val$grouping<-vapply(1:nrow(val),function(i) (strsplit(as.character(val$indicator[i]),split =  ".",fixed = T))[[1]][1],character(1))
-  
+
   return(val)
+}
+
+
+
+
+
+###################################################################
+######API query WBank data to compile for 'Spotlight'############
+##################################################################
+indicator = "AG.LND.FRST.ZS" #example
+
+#WB data for all country to get statistics
+WBdata_get <-function(indicator, ..., year=NULL, keep_NAs = TRUE){
+  baseURL <- "http://api.worldbank.org/v2/country/indicator/"
+
+  #to add (more) limiting statements later.........
+  if(is.null(year) == TRUE){
+    mrv <- 1
+  }
+
+  query<-list(mrv=mrv, gapfill="Y", per_page=500, format="json") #highly simplified; disregard other params for query, need only most recent indicator value(?).
+  getURL = paste0(baseURL,indicator)
+
+  jsonExtract<-httr::GET(getURL,query=query) %>%
+    content(as="parsed")%>%
+    .[[2]] %>% #select parsed data list
+    lapply(data.table::as.data.table) %>%
+    rbindlist(fill = TRUE) %>%
+    as.data.frame() %>%
+    distinct(country, .keep_all = TRUE) %>%
+    subset(nchar(country)>2) #remove country as codes
+
+  for(column in 1:ncol(jsonExtract)){
+    jsonExtract[,column] <- unlist(jsonExtract[,column])
+  }
+
+  if(keep_NAs == FALSE){
+    jsonExtract %>% filter(!is.na(value))
+  }
+
+
+}
+
+
+#Country rank and class per indicator
+WB_ind_rank <- function(indicator, country){
+
+  count <- WBdata_get(indicator, keep_NAs = FALSE) %>%
+    mutate(Rank = dplyr::ntile(value,nrow(.))) %>% #add ascending rank column
+    mutate(Rank_class = dplyr::ntile(value, 5)) %>%  # 0-20, 20-40, 40-60, 60-80, 80-100 quantiles
+    subset(country %in% country)
+
 }
