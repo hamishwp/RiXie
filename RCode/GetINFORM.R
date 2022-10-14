@@ -1,5 +1,6 @@
 library(httr)
 library(stringr)
+library(dplyr)
 
 
 ##--------Functions---------------
@@ -17,7 +18,7 @@ GetINFORMdata<-function(indicator,year=NULL,iso=NULL,normalise=F){
   # For more information, visit https://drmkc.jrc.ec.europa.eu/inform-index/In-depth/API-Demo
   
   #id<-GetINFORMid_year(year)
-  id= 450 #id for INFORMmid 2022 #not sure how to systematically get the workflow id!!! #Need to change code for this line.
+  id= 450 #id for INFORMmid 2022 #not sure how to systematically get the workflow id!!!
   indicator<-str_to_upper(gsub(" ", "", indicator, fixed = TRUE))
   
   url<-paste0("https://drmkc.jrc.ec.europa.eu/inform-index/API/InformAPI/countries/Scores/?WorkflowId=",id,"&IndicatorId=",indicator)
@@ -43,6 +44,7 @@ GetINFORMdata<-function(indicator,year=NULL,iso=NULL,normalise=F){
   
 }
 
+
 #Remove empty list function
 delete.NULLs  <-  function(x.list){   # delete null/empty entries in a list
   x.list[unlist(lapply(x.list, length) != 0)]
@@ -60,7 +62,7 @@ IndiCodes<-function(codes_list, level=1){
   } else {
     c1 = unlist(codes_list[1])
     c2 = sapply(codes_list[[2]], function(x) paste(c1,x,sep="."))
-    c3  = sapply(codes_list[[3]], function(x) paste(c2,x,sep=".")) #Some combinations will not exist but that's fine.
+    c3  = sapply(codes_list[[3]], function(x) paste(c2,x,sep=".")) #Some combinations will not exist but that's fine, will just delete nulls
     codes = c(c1,c2,c3)
   }
   
@@ -75,6 +77,23 @@ InformVals <- function(indicator,level){
 }
 
 
+
+#Country Rankings - input is all_df with values
+Inform_cRank <- function(data){
+  len <- nrow(data)
+  iso3 <- data$iso3
+  data[data == 0]<-NA
+  ranks <- apply(data[,-1], 2, function(x) ntile(desc(x), len)) %>%
+    data.frame(iso3, .)
+  rank_class <- apply(data[,-1], 2, function(x) as.integer(ntile(desc(x), 5))) %>%
+    data.frame(iso3, .)
+  
+  inform_all <-list(data, ranks, rank_class)
+  names(inform_all) <-c("values","ntile Ranks", "ntile classes")
+  
+  
+  return(inform_all)
+}
 # INFORMmean<-function(indicator,iso=NULL){
 #   
 #   INFORM<-data.frame(iso3=character(),variable=character(),value=numeric())
@@ -189,12 +208,18 @@ VU <- list("VU", list("SEV","VGR"), list("INQ","AD","UP", "OG"))
 HA <- list( "HA" , list("NAT","HUM"), list("EQ","TS","FL","TC","DR","EPI","CON"))
 
 
-Inform_codes_list <- list(CC,VU,HA)
+Inform_codes_list <- list(HA, VU, CC)
 
 Inform <-InformVals(INFORM, level=1)
 Inform_all_df<-lapply(Inform_codes_list, InformVals,level=3) %>%
+  lapply(., function(x) x[,c("iso3",sort(colnames(x[-1])))]) %>%
   Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE) , .) 
 
 
-Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), list(Inform_all_df,Inform))
+Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), list(Inform, Inform_all_df))
+
+
+#add ranks
+Country_with_ranks <- Inform_cRank(Inform_all_df)
+
 

@@ -8,7 +8,7 @@ library(reshape2)
 WBcall<-function(indicator,ISO=NULL){
   #if(is.null(fyear)) fyear<-syear
   if(is.null(ISO)) ISO<-"all"
-  value<-wb_data(indicator = indicator, country=ISO, mrv=1,mrnev=1, gapfill = T,
+  value<-wb_data(indicator = indicator, country=ISO, mrv=5, gapfill = T,
                  #start_date = as.character(syear-5L), end_date = as.character(fyear),
                  #date_as_class_date = T
                  )
@@ -179,20 +179,34 @@ WBcall<-function(indicator,ISO=NULL){
 # }
 
 
+
+#Ranks function ntile
+CountryRankIndices <- function(wb_data){
+  x<-wb_data$value
+  y<-length(wb_data$value)
+  
+  wb_data %>%
+    mutate(Rank = ntile(desc(x),y)) %>% # ranks for all
+    mutate(Rank_class = ntile(x,5)) #0-20, 20-40, 40-60, 60-80, 80-100 quantile classes
+}  
+
+#Remove empty list function
+delete.NULLs  <-  function(x.list){   # delete null/empty entries in a list
+  x.list[unlist(lapply(x.list, length) != 0)]
+}
+
 #-------------------Data extract-----------------
 indicator_list<-c(
   "Gender Statistics",
   "Global Financial Development",
   "Health Nutrition and Population Statistics",
   "Human Capital Index",
-  "Poverty and Equity",
-  "Statistical Capacity Indicators",
-  "World Development Indicators",
   'Multidimensional poverty index',
   "Labor Income Poverty Index",
   "World Risk Index",
-  "Gender Inequality Index",
+  "Gini",
   "Global Health Security Index",
+  "Global Climate Risk Index",
   "Human development index"
 )
 

@@ -1,0 +1,49 @@
+---
+title: "Spotlights_pdf"
+output:
+  pdf_document: default
+sansfont: Calibri Light
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo =FALSE)
+source("./GetINFORM.R")
+source("./GetWorldBank.R")
+
+#Combine values in one df#
+
+#INFORM
+country_iso <- "SSD"
+country_full <- "South Sudan"
+#Example "SSD"
+country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == "SSD",]) %>% #remove the iso column 
+  do.call(rbind, .) %>%
+  {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
+  t 
+
+
+```
+
+`r toString(country_full)`
+
+# South Sudan
+## RiX Spotlight for Humanitarian Needs Overview
+
+
+```{r, echo=FALSE,message=FALSE, out.width="20%"}
+library(geodata)
+a<-gadm(country_iso, level = 0, path=tempdir())
+plot(a, col= "chocolate2", axes=FALSE)
+
+```
+
+
+```{r Global Indices Table}
+knitr::kable(country_inform, "simple")
+
+
+
+
+```
+

@@ -130,3 +130,17 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 
 
 
+#--------Some data manipulation + analysis on ADM shapefile-----------
+library(sf)
+library(sp)
+library(rgdal)
+
+
+
+adm<- read_sf("/home/coleen/Documents/GitHub/RiXie/Data/Spatial")
+
+
+
+
+
+
