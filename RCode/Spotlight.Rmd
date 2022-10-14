@@ -2,7 +2,7 @@
 title: "Spotlights_pdf"
 output:
   pdf_document: default
-sansfont: Calibri Light
+  html_document: default
 ---
 
 
@@ -20,8 +20,10 @@ country_full <- "South Sudan"
 country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == "SSD",]) %>% #remove the iso column 
   do.call(rbind, .) %>%
   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
-  t 
-
+  t  %>%
+  data.frame() %>%
+  mutate(Index = rownames(.)) %>%
+  select(Index, Value, Rank, Class)
 
 ```
 
@@ -40,7 +42,61 @@ plot(a, col= "chocolate2", axes=FALSE)
 
 
 ```{r Global Indices Table}
-knitr::kable(country_inform, "simple")
+source("./Spotlight_plotting_functions.R")
+# ---- add column for bar plotting ----
+bar_inform <- country_inform %>% 
+  mutate(
+    bar = Class*18, #use class column to dictate the bar length
+    color = col_pal(Class),
+    bar_chart = bar_chart(bar, color = color),
+    bar_chart = map(bar_chart, ~gt::html(as.character(.x)))) %>% 
+  select(-bar, -color)
+
+# ------Table plot---------
+inform_table <- bar_inform[,-4] %>% 
+  gt() %>% 
+  cols_width(vars(bar_chart) ~ px(100),
+             vars(`Value`) ~ px(75),
+             vars(`Rank`) ~ px(75)
+  ) %>% 
+  cols_label(
+    bar_chart = "Risk Class"
+  ) %>%
+  cols_align(
+    align = "right",
+    columns = 2:3
+  ) %>% 
+  cols_align(
+    align = "left",
+    columns = vars(bar_chart)
+  ) %>% 
+  fmt_number(2:3) %>% 
+  tab_style(
+    style = cell_text(color = "black", weight = "bold"),
+    locations = list(
+      cells_column_labels(everything())
+    )
+  ) %>%  
+  tab_options(
+    row_group.border.top.width = px(3),
+    row_group.border.top.color = "black",
+    row_group.border.bottom.color = "black",
+    table_body.hlines.color = "white",
+    table.border.top.color = "white",
+    table.border.top.width = px(3),
+    table.border.bottom.color = "white",
+    table.border.bottom.width = px(3),
+    table_body.border.bottom.width = px(2),
+    table_body.border.bottom.color = "black",
+    column_labels.border.bottom.color = "black",
+    column_labels.border.bottom.width = px(3)
+  ) %>% 
+  tab_footnote(footnote = list("Inform Risk indices range from  1 to 10"),
+               locations = list(cells_column_labels(columns = 2))) %>% 
+  tab_source_note(md("**Data**: INFORM DRMKC INFORM"))
+
+inform_table
+
 
 
 

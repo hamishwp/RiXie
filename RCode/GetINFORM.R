@@ -83,13 +83,13 @@ Inform_cRank <- function(data){
   len <- nrow(data)
   iso3 <- data$iso3
   data[data == 0]<-NA
-  ranks <- apply(data[,-1], 2, function(x) ntile(desc(x), len)) %>%
+  ranks <- apply(data[,-1], 2, function(x) ntile(desc(x), len)) %>% #descending, so rank 1 is highest risk
     data.frame(iso3, .)
-  rank_class <- apply(data[,-1], 2, function(x) as.integer(ntile(desc(x), 5))) %>%
+  rank_class <- apply(data[,-1], 2, function(x) as.integer(ntile(x, 5))) %>%
     data.frame(iso3, .)
   
   inform_all <-list(data, ranks, rank_class)
-  names(inform_all) <-c("values","ntile Ranks", "ntile classes")
+  names(inform_all) <-c("Value","Rank", "Class")
   
   
   return(inform_all)
