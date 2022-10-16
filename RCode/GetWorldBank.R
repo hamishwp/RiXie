@@ -4,17 +4,22 @@ library(dplyr)
 library(magrittr)
 library(wbstats)
 library(reshape2)
+library(xlsx)
 
-WBcall<-function(indicator,ISO=NULL){
-  #if(is.null(fyear)) fyear<-syear
-  if(is.null(ISO)) ISO<-"all"
-  value<-wb_data(indicator = indicator, country=ISO, mrv=5, gapfill = T,
-                 #start_date = as.character(syear-5L), end_date = as.character(fyear),
+WBcall<-function(indicator,ISO=NULL,syear, fyear){
+  if(is.null(fyear)) fyear<-syear
+  if(is.null(ISO)) ISO<-"countries_only"
+  value<-wb_data(indicator = indicator, country=ISO,  mrnev=20,# mrv=10, freq="Y",
+                 start_date = as.character(syear-5L), end_date = as.character(fyear),
                  #date_as_class_date = T
-                 )
-  value%<>%transmute(iso3=iso3c,date=date,value=get(indicator))
-  value%>%filter(date==max(date))
+                 ) %>%
+    transmute(iso3=iso3c,Year=date,Value=get(indicator))%>%
+    filter(Year==max(Year)) %>%
+    mutate(Value = round(Value, 2))
+  
 }
+
+
 
 # # "EN.POP.DNST" -> Population Density
 # GetWBPDens<-function(syear,fyear){
@@ -182,8 +187,8 @@ WBcall<-function(indicator,ISO=NULL){
 
 #Ranks function ntile
 CountryRankIndices <- function(wb_data){
-  x<-wb_data$value
-  y<-length(wb_data$value)
+  x<-wb_data$Value
+  y<-length(wb_data$Value)
   
   wb_data %>%
     mutate(Rank = ntile(desc(x),y)) %>% # ranks for all
@@ -204,33 +209,44 @@ indicator_list<-c(
   'Multidimensional poverty index',
   "Labor Income Poverty Index",
   "World Risk Index",
-  "Gini",
+  "Gini Index",
   "Global Health Security Index",
   "Global Climate Risk Index",
   "Human development index"
 )
 
+
 #wb_data cache from wbstats package to find out indicator codes
 all_indi<-data.frame(wb_indicators())
+
+#test index
+#indi<-all_indi[grepl("index",all_indi$indicator) == TRUE,]
 
 #get indicator codes; #for multiple indicators of same type, use main/first indicator
 indicator_id <- indicator_list %>%
   sapply(., function(x) all_indi[grepl(x,all_indi$indicator) == TRUE,"indicator_id"][1])
 indicator_id  
 
+#If pre-defined list exists........
+indicators_list<-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Tables/WB_indicators.csv", header=TRUE)
+indicator_id<-indicators_list[indicators_list$For.country.profile.page..Y.N.=="Y","Variable.API.Name"]
+
+
+
 #Still use list of indicators_id to match full names in next step
 WB_data_all<-list()
 for(i in seq_along(indicator_id)){
   if(is.na(indicator_id[[i]]) == FALSE){
     WB_data_all[[i]]<-indicator_id[[i]] %>%
-      WBcall() %>%
+      WBcall(syear = 2010, fyear = 2022) %>%
       CountryRankIndices()
     
   }
 }
 
-names(WB_data_all)<-indicator_id
+names(WB_data_all)<-indicator_id[1:length(WB_data_all)]
 WB_data_all<- delete.NULLs(WB_data_all)
+
 
 
 

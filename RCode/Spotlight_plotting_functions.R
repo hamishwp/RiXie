@@ -7,6 +7,9 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(purrr)
+library(kableExtra)
+
+
 
 ##------------functions--------
 # Example table with bar plot
@@ -31,4 +34,16 @@ col_pal <- function(value, na.rm=TRUE){
     rev(paletteer::paletteer_d("RColorBrewer::RdYlGn")) %>% as.character(), 
     domain = c(1,5), na.color = NA)(value)
 }
+
+
+##more than two colors for color_tile in formattable...
+#https://stackoverflow.com/a/49887341/454773
+color_tile2 <- function (...) {
+  formatter("span", style = function(x) {
+    style(display = "block",
+          padding = "0 4px", 
+          `border-radius` = "4px", 
+          `background-color` = csscolor(matrix(as.integer(colorRamp(...)(normalize(as.numeric(x)))), 
+                                               byrow=TRUE, dimnames=list(c("red","green","blue"), NULL), nrow=3)))
+  })}
 

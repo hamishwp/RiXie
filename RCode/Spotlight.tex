@@ -51,10 +51,20 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{-\maxdimen} % remove section numbering
-\usepackage{amsmath}
 \usepackage{booktabs}
-\usepackage{caption}
 \usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
 \ifLuaTeX
   \usepackage{selnolig}  % disable illegal ligatures
 \fi
@@ -84,104 +94,39 @@ Overview}\label{rix-spotlight-for-humanitarian-needs-overview}}
 
 \includegraphics[width=0.2\linewidth]{Spotlight_files/figure-latex/unnamed-chunk-1-1}
 
-\begin{verbatim}
-## 
-## Attaching package: 'formattable'
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:gt':
-## 
-##     currency
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:terra':
-## 
-##     area
-\end{verbatim}
-
-\begin{verbatim}
-## 
-## Attaching package: 'tidyr'
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:terra':
-## 
-##     extract
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:reshape2':
-## 
-##     smiths
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:magrittr':
-## 
-##     extract
-\end{verbatim}
-
-\begin{verbatim}
-## 
-## Attaching package: 'purrr'
-\end{verbatim}
-
-\begin{verbatim}
-## The following object is masked from 'package:magrittr':
-## 
-##     set_names
-\end{verbatim}
-
-\begin{verbatim}
-## Warning: Since gt v0.3.0, `columns = vars(...)` has been deprecated.
-## * Please use `columns = c(...)` instead.
-## Since gt v0.3.0, `columns = vars(...)` has been deprecated.
-## * Please use `columns = c(...)` instead.
-## Since gt v0.3.0, `columns = vars(...)` has been deprecated.
-## * Please use `columns = c(...)` instead.
-## Since gt v0.3.0, `columns = vars(...)` has been deprecated.
-## * Please use `columns = c(...)` instead.
-\end{verbatim}
-
-\setlength{\LTpost}{0mm}
-\begin{longtable}{lrrl}
-\toprule
-Index & Value\textsuperscript{1} & Rank & Risk Class \\ 
-\midrule
-INFORM & $8.50$ & $2.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-HA & $7.30$ & $18.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-HA.HUM & $9.00$ & $16.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-HA.HUM.CON & $9.00$ & $16.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #F98F52; color: #F98F52; width: 72%"> &nbsp; </span> \\ 
-HA.NAT & $4.10$ & $101.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #FFFFBF; color: #FFFFBF; width: 54%"> &nbsp; </span> \\ 
-HA.NAT.DR & $3.50$ & $108.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #FFFFBF; color: #FFFFBF; width: 54%"> &nbsp; </span> \\ 
-HA.NAT.EPI & $7.30$ & $9.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-HA.NAT.EQ & $2.80$ & $107.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #FFFFBF; color: #FFFFBF; width: 54%"> &nbsp; </span> \\ 
-HA.NAT.FL & $7.10$ & $33.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-HA.NAT.TC & NA & NA & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: NA; color: NA; width: NA%"> &nbsp; </span> \\ 
-HA.NAT.TS & NA & NA & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: NA; color: NA; width: NA%"> &nbsp; </span> \\ 
-VU & $9.00$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-VU.SEV & $8.60$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-VU.SEV.AD & $10.00$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-VU.SEV.INQ & $4.80$ & $67.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #F98F52; color: #F98F52; width: 72%"> &nbsp; </span> \\ 
-VU.VGR & $9.30$ & $2.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-VU.VGR.OG & $8.00$ & $3.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-VU.VGR.UP & $10.00$ & $7.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC & $9.50$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INF & $9.70$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INF.AHC & $9.80$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INF.COM & $9.40$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INF.PHY & $9.80$ & $4.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INS & $9.30$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-CC.INS.DRR & NA & NA & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: NA; color: NA; width: NA%"> &nbsp; </span> \\ 
-CC.INS.GOV & $9.30$ & $1.00$ & <span style="display: inline-block; direction: ltr; border-radius: 4px; padding-right: 2px; background-color: #A50026; color: #A50026; width: 90%"> &nbsp; </span> \\ 
-\bottomrule
-\end{longtable}
-\begin{minipage}{\linewidth}
-\textsuperscript{1}Inform Risk indices range from  1 to 10\\
-\textbf{Data}: INFORM DRMKC INFORM\\
-\end{minipage}
+\begin{table}
+\centering
+\begin{tabular}[t]{l|r|r|r|>{\raggedright\arraybackslash}p{3cm}}
+\hline
+\multicolumn{2}{c|}{World} & \multicolumn{1}{c|}{ } & \multicolumn{2}{c}{Bank} \\
+\cline{1-2} \cline{4-5}
+Indicator & Value & Year & Rank & Class_levels\\
+\hline
+AG.LND.FRST.ZS & 11.33 & 2020 & 158 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #88b351">Low      </span>\\
+\hline
+AG.LND.PRCP.MM & 900.00 & 2018 & 99 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #eedc82">Moderate </span>\\
+\hline
+AG.PRD.FOOD.XD & 102.53 & 2020 & 117 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #eedc82">Moderate </span>\\
+\hline
+EN.ATM.PM25.MC.M3 & 45.58 & 2017 & 27 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee2c2c">Very High</span>\\
+\hline
+HD.HCI.OVRL & 0.31 & 2020 & 171 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #228b22">Very Low </span>\\
+\hline
+IC.BUS.DFRN.XQ & 34.62 & 2019 & 185 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #228b22">Very Low </span>\\
+\hline
+SH.DYN.MORT & 97.90 & 2020 & 6 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee2c2c">Very High</span>\\
+\hline
+SL.EMP.VULN.ZS & 90.24 & 2019 & 6 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee2c2c">Very High</span>\\
+\hline
+SL.UEM.TOTL.FE.ZS & 15.26 & 2021 & 42 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee8457">High     </span>\\
+\hline
+SL.UEM.TOTL.MA.ZS & 12.61 & 2021 & 30 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee2c2c">Very High</span>\\
+\hline
+SM.POP.NETM & -870998.00 & 2017 & 188 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #228b22">Very Low </span>\\
+\hline
+SP.RUR.TOTL.ZS & 79.49 & 2021 & 10 & <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ee2c2c">Very High</span>\\
+\hline
+\end{tabular}
+\end{table}
 
 \end{document}
