@@ -1,6 +1,3 @@
-# Example of using glue to just paste the value into pre-created HTML block
-# Example adapted from rtjohnson12 at: 
-# https://github.com/renkun-ken/formattable/issues/79#issuecomment-573165954
 library(gt)
 library(formattable)
 library(dplyr)

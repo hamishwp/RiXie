@@ -7,43 +7,43 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo =FALSE)
-#source("./GetINFORM.R")
+source("./GetINFORM.R")
 source("./GetWorldBank.R")
 
-country_iso <- "SSD"
+
 country_full <- "South Sudan"
+country_iso <- "SSD"
 #Example "SSD"
 
-#INFORM
-# country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == "SSD",]) %>% #remove the iso column 
-#   do.call(rbind, .) %>%
-#   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
-#   t  %>%
-#   data.frame() %>%
-#   mutate(Index = rownames(.)) %>%
-#   select(Index, Value, Rank, Class)
-
-
-#Wbank indicators.......
-#Define df matching numeric class with string class
+#Define df for matching numeric class with string class
 Rank_class_df<-data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
 Rank_class_df$Class_levels = factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
 
+#INFORM
+country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
+  do.call(rbind, .) %>%
+  {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
+  t  %>%
+  data.frame() %>%
+  mutate(Index = rownames(.)) %>%
+  select(Index, Value, Rank, Rank_class) %>%
+  plyr::join(., Rank_class_df, by="Rank_class") %>%
+  filter(complete.cases(.))
+
+
+#WORLD BANK
 #Wbank indicator df
 country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   do.call(rbind,.) %>%
   mutate(Indicator = row.names(.)) %>% 
-  merge(., Rank_class_df, by="Rank_class") %>%
+  plyr::join(., Rank_class_df, by="Rank_class") %>%
   select("Indicator", "Value","Year", "Rank", "Rank_class","Class_levels") %>%
   arrange(Indicator)
-
 
 
 ```
 
 `r toString(country_full)`
-
-# South Sudan
 ## RiX Spotlight for Humanitarian Needs Overview
 
 
@@ -57,16 +57,21 @@ plot(a, col= "chocolate2", axes=FALSE)
 
 ```{r Global Indices Table, message=FALSE, warning=FALSE}
 source("./Spotlight_plotting_functions.R")
-#Wbank table -for colored background in table..
+#WORLD BANK
+#table -for colored background in table..
 country_wbank$Class_levels <-  color_tile2(c("forestgreen",'lightgoldenrod2', "firebrick2"))(country_wbank$Class_levels)
-
-
-#table
 kbl(country_wbank[c(1:4,6)], escape = F) %>%
-  kable_paper("hover", full_width = F) %>%
-  column_spec(c(4,5), width = c("4cm","3cm")) %>%
- add_header_above(c( "World" = 2," ","Bank" = 2))
+  kable_paper("striped", full_width = F) %>%
+  column_spec(c(4,5), width = c("4cm","3cm")) 
+# %>%
+#  add_header_above(c( "World" = 2," ","Bank" = 2))
 
+#INFORM
+#table -for colored background in table..
+country_inform$Class_levels <-  color_tile2(c("forestgreen",'lightgoldenrod2', "firebrick2"))(country_inform$Class_levels)
+kbl(country_inform, escape = F) %>%
+  kable_paper("striped", full_width = F) %>%
+  column_spec(c(3,4), width = c("4cm","3cm")) 
 
 
 ```

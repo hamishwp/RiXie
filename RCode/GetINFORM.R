@@ -89,7 +89,7 @@ Inform_cRank <- function(data){
     data.frame(iso3, .)
   
   inform_all <-list(data, ranks, rank_class)
-  names(inform_all) <-c("Value","Rank", "Class")
+  names(inform_all) <-c("Value","Rank", "Rank_class")
   
   
   return(inform_all)
@@ -221,5 +221,6 @@ Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.
 
 #add ranks
 Country_with_ranks <- Inform_cRank(Inform_all_df)
+
 
 
