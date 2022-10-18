@@ -132,15 +132,15 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 
 #--------Some data manipulation + analysis on ADM shapefile-----------
 library(sf)
-library(sp)
-library(rgdal)
+library(dplyr)
 
 
+adm<- read_sf("/home/coleen/Documents/GitHub/RiXie/Data/Spatial")%>% 
+  st_drop_geometry() %>%
+  mutate_all(function(x) ifelse(is.nan(x), NA, x))
 
-adm<- read_sf("/home/coleen/Documents/GitHub/RiXie/Data/Spatial")
-
-
-
-
-
+#get country stats, row statistics
+adm_group <- aggregate(x = adm[,which(sapply(adm, class) == "numeric")], by = list(adm$ISO3CD), FUN = mean, na.rm=TRUE) %>%
+  mutate_all(function(x) ifelse(is.nan(x), NA, x)) %>%
+  rename_at(1,~"iso") 
 
