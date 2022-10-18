@@ -222,16 +222,16 @@ all_indi<-data.frame(wb_indicators())
 #test index
 #indi<-all_indi[grepl("index",all_indi$indicator) == TRUE,]
 
-#get indicator codes; #for multiple indicators of same type, use main/first indicator
+#get indicator codes + source column; #for multiple indicators of same type, use main/first indicator
 indicator_id <- indicator_list %>%
-  sapply(., function(x) all_indi[grepl(x,all_indi$indicator) == TRUE,"indicator_id"][1])
+  lapply(., function(x) all_indi[grepl(x,all_indi$indicator) == TRUE,"indicator_id"][1])
 indicator_id  
 
 #If pre-defined list exists........
 indicators_list<-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Tables/WB_indicators.csv", header=TRUE)
 indicator_id<-indicators_list[indicators_list$For.country.profile.page..Y.N.=="Y","Variable.API.Name"]
 
-
+#
 
 #Still use list of indicators_id to match full names in next step
 WB_data_all<-list()
@@ -246,7 +246,4 @@ for(i in seq_along(indicator_id)){
 
 names(WB_data_all)<-indicator_id[1:length(WB_data_all)]
 WB_data_all<- delete.NULLs(WB_data_all)
-
-
-
 

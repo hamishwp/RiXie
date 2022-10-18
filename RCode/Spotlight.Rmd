@@ -9,15 +9,17 @@ output:
 knitr::opts_chunk$set(echo =FALSE)
 source("./GetINFORM.R")
 source("./GetWorldBank.R")
-
+source("./AdminBoundaries.R")
 
 country_full <- "South Sudan"
 country_iso <- "SSD"
 #Example "SSD"
 
 #Define df for matching numeric class with string class
-Rank_class_df<-data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
-Rank_class_df$Class_levels = factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
+Rank_class_df <- data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
+Rank_class_df$Class_levels <- factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
+
+
 
 #INFORM
 country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
@@ -38,7 +40,24 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   mutate(Indicator = row.names(.)) %>% 
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   select("Indicator", "Value","Year", "Rank", "Rank_class","Class_levels") %>%
-  arrange(Indicator)
+  arrange(Indicator) %>%
+  ###ADD SOURCES!!!!########
+
+
+
+#Combine WORLDBANK and INFORM datasets.........to do!!!!!!!
+country_all <- rbind(country_inform,country_w)
+
+
+
+##ADM shapefiles, group by iso3cd-------
+adm_country<-adm_group[adm_group$iso == country_iso,] %>%
+  {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
+  t %>%
+  data.frame() %>%
+  round(.,2)
+
+colnames(adm_country) <- "Mean Value"
 
 
 ```
@@ -81,6 +100,13 @@ kbl(country_inform[c(1,2,5)], escape = F) %>%
   add_indent(row.ind2 , level_of_indent = 2) %>%
   add_header_above(c("INFORM Risk indicators" = 3), font_size = "medium")
 
+
+
+#table shapefile
+  kbl(adm_country, escape = F) %>%
+  kable_paper("striped", full_width = T) %>%
+  column_spec(1:2, width = c("2cm","3cm")) %>%
+  add_header_above(c("Country Statistics" = 2), font_size = "medium")
 
 ```
 
