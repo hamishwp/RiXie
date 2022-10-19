@@ -221,12 +221,12 @@ all_indi<-data.frame(wb_indicators())
 
 
 #If pre-defined list of indicator codes exists........
-indicator_list<-read.csv("/home/coleen/Documents/GitHub/GRAF_files/WB_indicators.csv", header=TRUE) %>%
+Wbank_codes_desc<-read.csv("/home/coleen/Documents/GitHub/GRAF_files/WB_indicators.csv", header=TRUE) %>%
   filter(For.country.profile.page..Y.N.=="Y") %>%
-  select(Variable.API.Name, Variable.description) %>%
+  select(Variable.API.Name, Indicator.Name) %>%
   mutate(Source = all_indi[match(Variable.API.Name,all_indi$indicator_id),"source_org"] )
 
-indicator_id<-indicator_list$Variable.API.Name
+indicator_id<-Wbank_codes_desc$Variable.API.Name
 
 #Still use list of indicators_id to match full names in next step
 WB_data_all<-list()

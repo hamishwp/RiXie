@@ -224,29 +224,5 @@ Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.
 Country_with_ranks <- Inform_cRank(Inform_all_df)
 
 ##description for index or indicator codes----------
-df<-data.frame(code = as.character(),Description = as.character())
-codes <-list(c("HA", "NAT","HUM","EQ","TS","FL","TC","DR","EPI","CON"), c("VU","SEV","VGR","INQ","AD","UP", "OG"),
-             c("CC","INS","INF","DRR","GOV","COM","PHY","AHC"))
-Description <- list(c("Hazards & Exposure", "Natural", "Human","Earthquake","Tsunami","Flood","Cyclone","Drought",
-                                 "Epidemic","Conflict Risk"),  c("Social-Economics Vulnerability","Vulnerable Groups","Poverty & Development",
-                                                                 "Inequality", "Economic Dependence", "Uprooted People", "Other Vulnerable Groups"),
-                    c("Lack of Coping Capacity", "Institutional", "Infrastructure","DRR Implementation", "Governance", "Communication",
-                      "Phyiscal Connectivity", "Access to Healthcare"))
-code_cat<-c("HA","VU","CC")
-codes_list <-list()                      
-for(i in seq_along(codes)){
-  codes_list[[i]]<- data.frame(codes[[i]],Description[[i]])
-  colnames(codes_list[[i]]) <- c("code","Description")
-}
+Inform_codes_desc <- read.csv("/home/coleen/Documents/GitHub/GRAF_files/INFORM_codes_list.csv",header = TRUE)[,4:5]
 
-names(codes_list) <- code_cat
-
-
-codes2label <- function(code){
-  code = country_inform$Index[[3]]
-   if(substr(code,1,2) =="HA"){
-     list <- which(names(codes_list) == "HA")
-     lab<- 
-   }
-  
-}

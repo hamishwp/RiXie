@@ -1,0 +1,36 @@
+GDLCODE,Description
+ISO3CD,ISO 3 Character Code
+ADM1NM,Admin 1 Level Name
+ADM2NM,Admin 2 Level Name
+POPULAT,Population
+FemalPp,Female Population
+Undr14P,Under 14 Population
+Ovr64Pp,Over 64 Population
+GDP,GDP-PPP Per Capita (USD-2011)
+ArPlltn,Air Pollution
+FL100yr,Flood Risk: 100 Year Return Period 
+DR50yr,Drought Risk: 50 Year Return Period 
+EQ475yr,Earthquake Risk: 475 Year Return Period 
+LS,Landslide Risk
+EHt20yr,Extreme Heat Risk: 20 Year Return Period 
+VC,Volcano Ashfall Risk
+Tsunami,Tsunami Risk
+region,Region
+SHDI,Subnational Human Development Index
+HealthI,Health Index
+LvngStI,Living Standards Index
+EductnI,Education Index
+LifeExp,Life Expectancy
+GrssNtI,Gross National Income (USD-2011)
+ExpctSY,Expected Schooling Years
+MnSchlY,Mean Schooling Years
+PD2022_,Projected Precipitation Difference 2022-2050
+STD2022,Projected Surface Temperature Difference 2022-2050
+TR2022_,Projected Total Runoff Difference 2022-2050
+MxCnsDD,Projected: Maximum Consecutive Dry Days
+MxCnsWD,Projected: Maximum Consecutive Wet Days
+LnGrwSs,Projected: Length of Growing Season
+AnnMnDMT,Projected: Annual Minimum Daily Minimum Temperature
+AnnMxDMT,Projected: Annual Maximum Daily Maximum Temperature
+Shape__Area,Shape Area
+Shape__Length,Shape Circumference Length

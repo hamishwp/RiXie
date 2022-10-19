@@ -30,38 +30,29 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   mutate(Index = rownames(.)) %>%
   select(Index, Value, Rank, Rank_class) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
-  filter(complete.cases(.)) 
+  filter(complete.cases(.)) %>%
+  left_join(.,Inform_codes_desc, by = c("Index" = "INFORM.Id")) %>% #add description and source
+  mutate(Source = "DRMKC INFORM, Mid 2022") #adapt as variable!
+
 
 
 #WORLD BANK
-#Wbank indicator df
 country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   do.call(rbind,.) %>%
   mutate(Indicator = row.names(.)) %>% 
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   select("Indicator", "Value","Year", "Rank", "Rank_class","Class_levels") %>%
   arrange(Indicator) %>%
-  left_join(.,indicator_list, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
+  left_join(.,Wbank_codes_desc, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
   mutate(across(everything(), as.vector)) %>% #remove any attribute label
   rename(Index = Indicator)
 
 
-label_group <- function(x){
-  if(grepl("VU|MORT|VUL ", x) == TRUE){
-     lab = "VUL"
-  } else{
-    lab = NULL
-  }
-}
-
 #Combine WORLDBANK and INFORM datasets
 country_all <- plyr::rbind.fill(country_inform,country_wbank) %>%
-  mutate(Group = case_when(grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "VU"),
-         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "HA"),) #unfinished!
-
-
-#CLassify Add column for group - HA, VU, ExP, CC, Risk
-
+  mutate(Group = case_when(grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "VU",
+         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "HA", grepl("CC", Index) == TRUE ~ "CC", 
+          grepl("INFORM", Index) == TRUE ~ "Risk")) #unfinished
 
 
 
@@ -70,10 +61,12 @@ adm_country<-adm_group[adm_group$iso == country_iso,] %>%
   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
   t %>%
   data.frame() %>%
-  round(.,2)
-
-colnames(adm_country) <- "Mean Value"
-
+  round(.,2) %>%
+  rename("Mean Value" = "X39") %>%
+  mutate(Code = row.names(.)) %>%
+  left_join(.,adm_labels, by = c("Code" = "GDLCODE")) %>%
+  select("Description", "Mean Value") 
+  
 
 ```
 
