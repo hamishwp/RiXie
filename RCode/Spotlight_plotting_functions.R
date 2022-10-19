@@ -8,6 +8,9 @@ library(kableExtra)
 
 
 
+
+
+
 ##------------functions--------
 # Example table with bar plot
 #modified from :https://themockup.blog/static/slides/intro-tables.html?panelset14=table9#63

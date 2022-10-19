@@ -30,7 +30,7 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   mutate(Index = rownames(.)) %>%
   select(Index, Value, Rank, Rank_class) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
-  filter(complete.cases(.))
+  filter(complete.cases(.)) 
 
 
 #WORLD BANK
@@ -41,12 +41,27 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   select("Indicator", "Value","Year", "Rank", "Rank_class","Class_levels") %>%
   arrange(Indicator) %>%
-  ###ADD SOURCES!!!!########
+  left_join(.,indicator_list, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
+  mutate(across(everything(), as.vector)) %>% #remove any attribute label
+  rename(Index = Indicator)
 
 
+label_group <- function(x){
+  if(grepl("VU|MORT|VUL ", x) == TRUE){
+     lab = "VUL"
+  } else{
+    lab = NULL
+  }
+}
 
-#Combine WORLDBANK and INFORM datasets.........to do!!!!!!!
-country_all <- rbind(country_inform,country_w)
+#Combine WORLDBANK and INFORM datasets
+country_all <- plyr::rbind.fill(country_inform,country_wbank) %>%
+  mutate(Group = case_when(grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "VU"),
+         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "HA"),) #unfinished!
+
+
+#CLassify Add column for group - HA, VU, ExP, CC, Risk
+
 
 
 
