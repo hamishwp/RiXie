@@ -13,6 +13,7 @@ GetINFORMid_year<-function(year){
   
 }
 
+
 GetINFORMdata<-function(indicator,year=NULL,iso=NULL,normalise=F){
   # indicator= {INFORM, CC, VU, VU.SEV, CC.INF.PHY, } 
   # For more information, visit https://drmkc.jrc.ec.europa.eu/inform-index/In-depth/API-Demo
@@ -204,7 +205,7 @@ Inform_cRank <- function(data){
 #Codes list with levels
 INFORM<- list("INFORM")
 CC <-list("CC", list("INS","INF"), list("DRR","GOV","COM","PHY","AHC"))
-VU <- list("VU", list("SEV","VGR"), list("INQ","AD","UP", "OG"))
+VU <- list("VU", list("SEV","VGR"), list("PD", "INQ","AD","UP", "OG"))
 HA <- list( "HA" , list("NAT","HUM"), list("EQ","TS","FL","TC","DR","EPI","CON"))
 
 
@@ -222,5 +223,6 @@ Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.
 #add ranks
 Country_with_ranks <- Inform_cRank(Inform_all_df)
 
-#
+##description for index or indicator codes----------
+Inform_codes_desc <- read.csv("/home/coleen/Documents/GitHub/GRAF_files/INFORM_codes_list.csv",header = TRUE)[,4:5]
 

@@ -216,22 +216,17 @@ indicator_list<-c(
 )
 
 
-#wb_data cache from wbstats package to find out indicator codes
+#wb_data cache from wbstats package to find out indicator codes, get info for sources of data
 all_indi<-data.frame(wb_indicators())
 
-#test index
-#indi<-all_indi[grepl("index",all_indi$indicator) == TRUE,]
 
-#get indicator codes + source column; #for multiple indicators of same type, use main/first indicator
-indicator_id <- indicator_list %>%
-  lapply(., function(x) all_indi[grepl(x,all_indi$indicator) == TRUE,"indicator_id"][1])
-indicator_id  
+#If pre-defined list of indicator codes exists........
+Wbank_codes_desc<-read.csv("/home/coleen/Documents/GitHub/GRAF_files/WB_indicators.csv", header=TRUE) %>%
+  filter(For.country.profile.page..Y.N.=="Y") %>%
+  select(Variable.API.Name, Indicator.Name) %>%
+  mutate(Source = all_indi[match(Variable.API.Name,all_indi$indicator_id),"source_org"] )
 
-#If pre-defined list exists........
-indicators_list<-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Tables/WB_indicators.csv", header=TRUE)
-indicator_id<-indicators_list[indicators_list$For.country.profile.page..Y.N.=="Y","Variable.API.Name"]
-
-#
+indicator_id<-Wbank_codes_desc$Variable.API.Name
 
 #Still use list of indicators_id to match full names in next step
 WB_data_all<-list()
@@ -239,11 +234,11 @@ for(i in seq_along(indicator_id)){
   if(is.na(indicator_id[[i]]) == FALSE){
     WB_data_all[[i]]<-indicator_id[[i]] %>%
       WBcall(syear = 2010, fyear = 2022) %>%
-      CountryRankIndices()
-    
-  }
+      CountryRankIndices() 
+}
 }
 
 names(WB_data_all)<-indicator_id[1:length(WB_data_all)]
 WB_data_all<- delete.NULLs(WB_data_all)
+
 

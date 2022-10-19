@@ -134,7 +134,7 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 library(sf)
 library(dplyr)
 
-
+#shapefile
 adm<- read_sf("/home/coleen/Documents/GitHub/RiXie/Data/Spatial")%>% 
   st_drop_geometry() %>%
   mutate_all(function(x) ifelse(is.nan(x), NA, x))
@@ -144,3 +144,6 @@ adm_group <- aggregate(x = adm[,which(sapply(adm, class) == "numeric")], by = li
   mutate_all(function(x) ifelse(is.nan(x), NA, x)) %>%
   rename_at(1,~"iso") 
 
+
+#Header labels
+adm_labels <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/Field_Names.csv",header=T)
