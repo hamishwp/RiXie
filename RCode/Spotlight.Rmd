@@ -1,3 +1,7 @@
+---
+output:
+  html_document: default
+---
 ```{r,  echo=FALSE,message=FALSE,warning=FALSE}
 knitr::opts_chunk$set(echo =FALSE)
 country_full <- "South Sudan"
@@ -9,13 +13,10 @@ pres_date <- Sys.Date()
 ```
 ---
 title: `r pres_title`
-output: html_document
 ---
-
 ## RiX Spotlight for Humanitarian Needs Overview
 
-```{r setup, include=FALSE}
-
+```{r, include=FALSE}
 source("./GetINFORM.R")
 source("./GetWorldBank.R")
 source("./AdminBoundaries.R")
@@ -24,7 +25,6 @@ source("./AdminBoundaries.R")
 #Define df for matching numeric class with string class
 Rank_class_df <- data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
 Rank_class_df$Class_levels <- factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
-
 
 
 #INFORM
@@ -39,7 +39,6 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   filter(complete.cases(.)) %>%
   left_join(.,Inform_codes_desc, by = c("Index" = "INFORM.Id")) %>% #add description and source
   mutate(Source = "DRMKC INFORM, Mid 2022", Year = year) #adapt as variable!
-
 
 
 #WORLD BANK
@@ -57,15 +56,14 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
 #Combine WORLDBANK and INFORM datasets
 country_all <- plyr::rbind.fill(country_inform,country_wbank) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
-  mutate(Group = case_when(grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "3_VU",
-         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "2_HA", grepl("CC", Index) == TRUE ~ "4_CC", 
-          grepl("INFORM", Index) == TRUE ~ "1_Risk")) %>%
+  mutate(Group = case_when(grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "c) Vulnerability",
+         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "b) Hazards & Exposure", grepl("CC", Index) == TRUE ~ "d) Lack fo Coping Capacity", 
+          grepl("INFORM", Index) == TRUE ~ "a) Risk Index")) %>%
   mutate(Description = " ") %>%
   arrange(Group)
 
 
-
-##ADM shapefiles, group by iso3cd-------
+#ADM shapefiles, group by iso3cd-------
 adm_country<-adm_group[adm_group$iso == country_iso,] %>%
   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
   t %>%
@@ -81,7 +79,7 @@ adm_country<-adm_group[adm_group$iso == country_iso,] %>%
 
 
 
-```{r, echo=FALSE,message=FALSE, out.width="20%"}
+```{r, echo=FALSE,message=FALSE, out.width="20%", fig.align = "right"}
 library(geodata)
 a<-gadm(country_iso, level = 0, path=tempdir())
 plot(a, col= "dodgerblue2", axes=FALSE)
@@ -118,11 +116,12 @@ source("./Spotlight_plotting_functions.R")
 
 #------Combine WBANK+INFORM table---------
 #tile color
-country_all$Class_levels <-  color_tile2(c("forestgreen",'lightgoldenrod2', "firebrick2"))(country_all$Class_levels)
+country_all$Class_levels <-  color_tile2(c("forestgreen",'lightgoldenrod2', "firebrick1"))(country_all$Class_levels)
 
 kbl(country_all[c(5,2:3,10,7,8,6)], escape = F) %>%
   kable_paper("striped", full_width = T) %>%
   column_spec(c(1,2,3,4), width = c("6cm", "4cm","3cm","5cm")) %>%
+  pack_rows(index = table(country_all$Group)) %>%
   # add_indent(row.ind1 , level_of_indent = 1) %>%
   # add_indent(row.ind2 , level_of_indent = 2) %>%
   add_header_above(c("Basic Risk Data" =7), font_size = "medium")

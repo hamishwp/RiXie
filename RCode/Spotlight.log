@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019/Debian) (preloaded format=pdflatex 2021.5.31)  16 OCT 2022 23:14
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019/Debian) (preloaded format=pdflatex 2021.5.31)  20 OCT 2022 14:34
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -604,32 +604,32 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 )
-<Spotlight_files/figure-latex/unnamed-chunk-1-1.pdf, id=4, 469.755pt x 325.215p
+<Spotlight_files/figure-latex/unnamed-chunk-3-1.pdf, id=4, 469.755pt x 325.215p
 t>
-File: Spotlight_files/figure-latex/unnamed-chunk-1-1.pdf Graphic file (type pdf
+File: Spotlight_files/figure-latex/unnamed-chunk-3-1.pdf Graphic file (type pdf
 )
-<use Spotlight_files/figure-latex/unnamed-chunk-1-1.pdf>
-Package pdftex.def Info: Spotlight_files/figure-latex/unnamed-chunk-1-1.pdf  us
-ed on input line 95.
+<use Spotlight_files/figure-latex/unnamed-chunk-3-1.pdf>
+Package pdftex.def Info: Spotlight_files/figure-latex/unnamed-chunk-3-1.pdf  us
+ed on input line 90.
 (pdftex.def)             Requested size: 93.94933pt x 65.04184pt.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 99.
+(Font)              <10> on input line 92.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 99.
+(Font)              <7> on input line 92.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <5> on input line 99.
+(Font)              <5> on input line 92.
 ! Missing $ inserted.
 <inserted text> 
                 $
-l.103 Indicator & Value & Year & Rank & Class_
-                                              levels\\ 
+l.178 \end{tabu}
+                 
 Here is how much of TeX's memory you used:
- 14302 strings out of 483183
- 207514 string characters out of 5966292
- 497326 words of memory out of 5000000
- 29038 multiletter control sequences out of 15000+600000
- 575584 words of font info for 72 fonts, out of 8000000 for 9000
+ 14300 strings out of 483183
+ 207457 string characters out of 5966292
+ 497535 words of memory out of 5000000
+ 29034 multiletter control sequences out of 15000+600000
+ 569670 words of font info for 71 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 41i,11n,42p,808b,333s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 41i,10n,42p,808b,329s stack positions out of 5000i,500n,10000p,200000b,80000s
 
 !  ==> Fatal error occurred, no output PDF file produced!
