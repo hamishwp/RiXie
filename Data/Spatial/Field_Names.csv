@@ -7,7 +7,7 @@ FemalPp,Female Population
 Undr14P,Under 14 Population
 Ovr64Pp,Over 64 Population
 GDP,GDP-PPP Per Capita (USD-2011)
-ArPlltn,Air Pollution
+ArPlltn,Air Pollution (micrograms/m^3)
 FL100yr,Flood Risk: 100 Year Return Period 
 DR50yr,Drought Risk: 50 Year Return Period 
 EQ475yr,Earthquake Risk: 475 Year Return Period 
@@ -20,7 +20,7 @@ SHDI,Subnational Human Development Index
 HealthI,Health Index
 LvngStI,Living Standards Index
 EductnI,Education Index
-LifeExp,Life Expectancy
+LifeExp,Life Expectancy (years)
 GrssNtI,Gross National Income (USD-2011)
 ExpctSY,Expected Schooling Years
 MnSchlY,Mean Schooling Years
@@ -30,7 +30,7 @@ TR2022_,Projected Total Runoff Difference 2022-2050
 MxCnsDD,Projected: Maximum Consecutive Dry Days
 MxCnsWD,Projected: Maximum Consecutive Wet Days
 LnGrwSs,Projected: Length of Growing Season
-AnnMnDMT,Projected: Annual Minimum Daily Minimum Temperature
-AnnMxDMT,Projected: Annual Maximum Daily Maximum Temperature
+AnnMnDMT,Projected: Annual Minimum Daily Minimum Temperature (Celsius)
+AnnMxDMT,Projected: Annual Maximum Daily Maximum Temperature (Celsius)
 Shape__Area,Shape Area
 Shape__Length,Shape Circumference Length

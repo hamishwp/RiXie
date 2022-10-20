@@ -202,11 +202,15 @@ Inform_cRank <- function(data){
 
 
 #-------------Extracting the data/ Applying the functions starts here----------------
+#Input year:
+year <- 2022
+
 #Codes list with levels
 INFORM<- list("INFORM")
 CC <-list("CC", list("INS","INF"), list("DRR","GOV","COM","PHY","AHC"))
 VU <- list("VU", list("SEV","VGR"), list("PD", "INQ","AD","UP", "OG"))
 HA <- list( "HA" , list("NAT","HUM"), list("EQ","TS","FL","TC","DR","EPI","CON"))
+
 
 
 Inform_codes_list <- list(HA, VU, CC)
@@ -217,11 +221,14 @@ Inform_all_df<-lapply(Inform_codes_list, InformVals,level=3) %>%
   Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE) , .) 
 
 
+#combine all and add year info
 Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), list(Inform, Inform_all_df))
-
+  
 
 #add ranks
 Country_with_ranks <- Inform_cRank(Inform_all_df)
+
+
 
 ##description for index or indicator codes----------
 Inform_codes_desc <- read.csv("/home/coleen/Documents/GitHub/GRAF_files/INFORM_codes_list.csv",header = TRUE)[,4:5]
