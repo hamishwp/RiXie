@@ -134,8 +134,11 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 library(sf)
 library(dplyr)
 
+options(scipen = 999)   
+load("codes_desc.RData")
+
 #shapefile
-adm<- read_sf("/home/coleen/Documents/GitHub/RiXie/Data/Spatial")%>% 
+adm<- adm %>%
   st_drop_geometry() %>%
   mutate_all(function(x) ifelse(is.nan(x), NA, x))
 
@@ -144,6 +147,32 @@ adm_group <- aggregate(x = adm[,which(sapply(adm, class) == "numeric")], by = li
   mutate_all(function(x) ifelse(is.nan(x), NA, x)) %>%
   rename_at(1,~"iso") 
 
+#Rank based on the current number of countries in the shapefile.......
+
+Adm_cRank <- function(data){
+  len <- nrow(data)
+  iso3 <- data$iso
+  data[data == 0]<-NA
+  ranks <- apply(data[,-1], 2, function(x) ntile(desc(x), len)) %>% #descending, so rank 1 is highest risk
+    data.frame(iso3, .)
+  rank_out_of <- apply(data[,-1], 2, function(x) sum(!is.na(x))) %>%
+    sapply(., function (x) rep(x,len)) %>%
+    data.frame(iso3, .)
+  rank_class <- apply(data[,-1], 2, function(x) as.integer(ntile(x, 5))) %>%
+    data.frame(iso3, .)
+  
+  list_all <-list(data, ranks, rank_out_of, rank_class)
+  names(list_all) <-c("Value","Rank", "Rank_out_of", "Rank_class")
+  
+  
+  return(list_all)
+}
+
+
+adm_ranks<-Adm_cRank(adm_group)
 
 #Header labels
-adm_labels <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/Field_Names.csv",header=T)
+#adm_labels <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/Field_Names.csv",header=T)
+
+#Adm sources:
+#adm_sources <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/MappingDataSources.csv",header=T)

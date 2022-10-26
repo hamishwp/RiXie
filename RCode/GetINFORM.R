@@ -2,49 +2,67 @@ library(httr)
 library(stringr)
 library(dplyr)
 
+#---------information on INFORM datasets:--------------
+host <- "https://drmkc.jrc.ec.europa.eu/inform-index/API/InformAPI/"
 
-##--------Functions---------------
-GetINFORMid_year<-function(year){
-  url<-paste0("https://drmkc.jrc.ec.europa.eu/inform-index/API/InformAPI/Workflows/GetByYear/",year)
-  robj<-tryCatch(GET(url = url),error = function(e) NULL)
-  if (robj$status_code!=200) stop(paste0("ERROR: INFORM id lookup table not found for ",year))
-  
-  return(content(robj,as = "parsed")[[1]][["WorkflowCompareId"]])
-  
-}
+Inform_index_info <- httr::GET(paste0(host,"Indicators/Index/")) %>%
+  content(., "text") %>%
+  jsonlite::fromJSON(., flatten = TRUE) 
+
+Inform_wrkflo_info <- httr::GET(paste0(host, "Workflows/Index/")) %>%
+  content(., "text") %>%
+  jsonlite::fromJSON(., flatten = TRUE) 
 
 
-GetINFORMdata<-function(indicator,year=NULL,iso=NULL,normalise=F){
+
+##------------Functions---------------
+# GetINFORMid_year<-function(year){
+#   url<-paste0("https://drmkc.jrc.ec.europa.eu/inform-index/API/InformAPI/Workflows/GetByYear/",year)
+#   robj<-tryCatch(GET(url = url),error = function(e) NULL)
+#   if (robj$status_code!=200) stop(paste0("ERROR: INFORM id lookup table not found for ",year))
+#   
+#   return(content(robj,as = "parsed")[[1]][["WorkflowCompareId"]])
+#   
+# }
+
+GetINFORMdata<-function(indicator, dataset_name, iso=NULL, normalise=F){
   # indicator= {INFORM, CC, VU, VU.SEV, CC.INF.PHY, } 
-  # For more information, visit https://drmkc.jrc.ec.europa.eu/inform-index/In-depth/API-Demo
+  # For more information, visit https://drmkc.jrc.ec.europa.eu/inform-index/In-depth/API-Demo or 
+  # https://drmkc.jrc.ec.europa.eu/inform-index/portals/0/INFORM%20GRI%20-%20New%20Web%20API%20Documentation.pdf
   
-  #id<-GetINFORMid_year(year)
-  id= 450 #id for INFORMmid 2022 #not sure how to systematically get the workflow id!!!
-  indicator<-str_to_upper(gsub(" ", "", indicator, fixed = TRUE))
+  Inform_wrkflo_info <- httr::GET(paste0(host, "Workflows/Index/")) %>%
+    content(., "text") %>%
+    jsonlite::fromJSON(., flatten = TRUE) 
+  
+  id <-Inform_wrkflo_info %>%
+                   filter(Name == dataset_name) %>%
+                   select(WorkflowId) %>%
+                   as.integer()
+  
+  if(length(id) == 0){
+    stop(paste0("ERROR: INFORM dataset name does not exist"))
+  }
   
   url<-paste0("https://drmkc.jrc.ec.europa.eu/inform-index/API/InformAPI/countries/Scores/?WorkflowId=",id,"&IndicatorId=",indicator)
   
   robj<-tryCatch(GET(url = url),error = function(e) NULL)
   if (robj$status_code!=200) stop(paste0("ERROR: INFORM id lookup table not found for ",year))
-  
+      
   tmp<-content(robj,as = "parsed")
-  
+      
   #transformed into an if condition in case inform code does not exist
   if(length(tmp)==0){
     data = NULL
     #stop(paste0("ERROR: WB indicator not found '",indicator,"' see GetINFORMdata in GetINFORM.R for examples"))
-  } else{
-    data<-as.data.frame(t(matrix(unlist(tmp), nrow=length(unlist(tmp[[1]]))))); data<-data[,c(1,3)]; colnames(data)<-c("iso3",indicator)
-    data[,2]<-as.numeric(data[,2])
-  }
-  
+    } else{
+      data<-as.data.frame(t(matrix(unlist(tmp), nrow=length(unlist(tmp[[1]]))))); data<-data[,c(1,3)]; colnames(data)<-c("iso3",indicator)
+      data[,2]<-as.numeric(data[,2])
+      }
   if(normalise) data[,2]<-data[,2]/10
-  
+      
   if(is.null(iso)) return(data)
   return(filter(data,iso3==iso))
-  
 }
-
 
 #Remove empty list function
 delete.NULLs  <-  function(x.list){   # delete null/empty entries in a list
@@ -70,9 +88,9 @@ IndiCodes<-function(codes_list, level=1){
 }  
 
 #function to combine values per indicator category into a df
-InformVals <- function(indicator,level){
+InformVals <- function(indicator,level, dataset_name){
   indicator.df <- IndiCodes(indicator, level=level) %>%
-    lapply(., function(x) GetINFORMdata(x)) %>%
+    lapply(., function(x) GetINFORMdata(x, dataset_name = dataset_name)) %>%
     delete.NULLs() %>%
     Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), .)
 }
@@ -86,11 +104,14 @@ Inform_cRank <- function(data){
   data[data == 0]<-NA
   ranks <- apply(data[,-1], 2, function(x) ntile(desc(x), len)) %>% #descending, so rank 1 is highest risk
     data.frame(iso3, .)
+  rank_out_of <- apply(data[,-1], 2, function(x) sum(!is.na(x))) %>%
+    sapply(., function (x) rep(x,len)) %>%
+    data.frame(iso3, .)
   rank_class <- apply(data[,-1], 2, function(x) as.integer(ntile(x, 5))) %>%
     data.frame(iso3, .)
   
-  inform_all <-list(data, ranks, rank_class)
-  names(inform_all) <-c("Value","Rank", "Rank_class")
+  inform_all <-list(data, ranks, rank_out_of, rank_class)
+  names(inform_all) <-c("Value","Rank", "Rank_out_of", "Rank_class")
   
   
   return(inform_all)
@@ -202,8 +223,11 @@ Inform_cRank <- function(data){
 
 
 #-------------Extracting the data/ Applying the functions starts here----------------
-#Input year:
-year <- 2022
+
+
+#Inputs:
+dataset = "INFORM Risk Mid 2022"
+
 
 #Codes list with levels
 INFORM<- list("INFORM")
@@ -211,25 +235,24 @@ CC <-list("CC", list("INS","INF"), list("DRR","GOV","COM","PHY","AHC"))
 VU <- list("VU", list("SEV","VGR"), list("PD", "INQ","AD","UP", "OG"))
 HA <- list( "HA" , list("NAT","HUM"), list("EQ","TS","FL","TC","DR","EPI","CON"))
 
-
-
 Inform_codes_list <- list(HA, VU, CC)
 
-Inform <-InformVals(INFORM, level=1)
-Inform_all_df<-lapply(Inform_codes_list, InformVals,level=3) %>%
+#Risk:
+Inform_Risk<-InformVals(INFORM, level=1, dataset_name = dataset)
+
+
+#Risk components:
+Inform_all_df<-lapply(Inform_codes_list, InformVals,level=3, dataset_name = dataset) %>%
   lapply(., function(x) x[,c("iso3",sort(colnames(x[-1])))]) %>%
   Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE) , .) 
 
 
 #combine all and add year info
-Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), list(Inform, Inform_all_df))
+Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE), list(Inform_Risk, Inform_all_df))
   
 
 #add ranks
 Country_with_ranks <- Inform_cRank(Inform_all_df)
 
 
-
-##description for index or indicator codes----------
-Inform_codes_desc <- read.csv("/home/coleen/Documents/GitHub/GRAF_files/INFORM_codes_list.csv",header = TRUE)[,4:5]
 

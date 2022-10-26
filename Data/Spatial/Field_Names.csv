@@ -7,7 +7,7 @@ FemalPp,Female Population
 Undr14P,Under 14 Population
 Ovr64Pp,Over 64 Population
 GDP,GDP-PPP Per Capita (USD-2011)
-ArPlltn,Air Pollution (micrograms/m^3)
+ArPlltn,Air Pollution (micrograms per cubic meter)
 FL100yr,Flood Risk: 100 Year Return Period 
 DR50yr,Drought Risk: 50 Year Return Period 
 EQ475yr,Earthquake Risk: 475 Year Return Period 
@@ -24,8 +24,8 @@ LifeExp,Life Expectancy (years)
 GrssNtI,Gross National Income (USD-2011)
 ExpctSY,Expected Schooling Years
 MnSchlY,Mean Schooling Years
-PD2022_,Projected Precipitation Difference 2022-2050  (kg/m/yr)
-STD2022,Projected Surface Temperature Difference 2022-2050  (kg/m/yr)
+PD2022_,Projected Precipitation Difference 2022-2050  (kg per meter per yr)
+STD2022,Projected Surface Temperature Difference 2022-2050  (kg per meter per year)
 TR2022_,Projected Total Runoff Difference 2022-2050
 MxCnsDD,Projected: Maximum Consecutive Dry Days
 MxCnsWD,Projected: Maximum Consecutive Wet Days

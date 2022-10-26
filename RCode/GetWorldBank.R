@@ -10,7 +10,7 @@ WBcall<-function(indicator,ISO=NULL,syear, fyear){
   if(is.null(fyear)) fyear<-syear
   if(is.null(ISO)) ISO<-"countries_only"
   value<-wb_data(indicator = indicator, country=ISO,  mrnev=20,# mrv=10, freq="Y",
-                 start_date = as.character(syear-5L), end_date = as.character(fyear),
+                 start_date = as.character(syear-5L), end_date = as.character(fyear)
                  #date_as_class_date = T
                  ) %>%
     transmute(iso3=iso3c,Year=date,Value=get(indicator))%>%
@@ -192,6 +192,7 @@ CountryRankIndices <- function(wb_data){
   
   wb_data %>%
     mutate(Rank = ntile(desc(x),y)) %>% # ranks for all
+    mutate(Rank_out_of = y) %>%
     mutate(Rank_class = ntile(x,5)) #0-20, 20-40, 40-60, 60-80, 80-100 quantile classes
 }  
 
