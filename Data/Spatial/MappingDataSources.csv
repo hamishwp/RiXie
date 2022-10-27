@@ -24,3 +24,6 @@ Climate Change,MxCnsWD,Consecutive wet days - CMIP5 monthly data on single level
 Climate Change,MxCnsDD,Consecutive dry days - CMIP5 monthly data on single levels,Copernicus - Climate Data Store,International & National Organisations,https://cds.climate.copernicus.eu/cdsapp#!/dataset/projections-cmip5-monthly-single-levels?tab=overview,2018
 Climate Change,STD2022,Surface temperature difference 2050/2022 - CMIP6 climate projections,Copernicus - Climate Data Store,International & National Organisations,https://cds.climate.copernicus.eu/cdsapp#!/dataset/projections-cmip6?tab=overview,2021
 Climate Change,PD2022_,Precipitation difference 2050/2022 - CMIP6 climate projections,Copernicus - Climate Data Store,International & National Organisations,https://cds.climate.copernicus.eu/cdsapp#!/dataset/projections-cmip6?tab=overview,2021
+Hazard,Tsunami,Tsunami Hazard,,,,
+Vulnerability,ExpctSY,Expected Schooling Years,,,,
+Hazard,DR50yr,Drought Frequency for 50 year return period,,,,
