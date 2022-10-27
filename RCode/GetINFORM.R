@@ -227,7 +227,7 @@ Inform_cRank <- function(data){
 
 #Inputs:
 dataset = "INFORM Risk Mid 2022"
-
+inform_year=2022
 
 #Codes list with levels
 INFORM<- list("INFORM")

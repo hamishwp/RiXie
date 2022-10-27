@@ -6,10 +6,9 @@ output:
 ```{r setting options and loading data, include=FALSE}
 knitr::opts_chunk$set(echo =FALSE, message=FALSE, warning=FALSE)
 
-load("codes_desc.RData")
-sys.source("./GetINFORM.R", envir = knitr::knit_global())
-#source("./GetINFORM.R")
+load("codes_desc.RData") #returns error, but seems to be working!
 sys.source("./GetWorldBank.R", envir = knitr::knit_global())
+sys.source("./GetINFORM.R", envir = knitr::knit_global())
 sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
 
 
@@ -17,7 +16,7 @@ sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
 
 ```{r selecting country}
 #country select
-country_full <- "Eswatini"
+country_full <- "Madagascar"
 country_iso <- iso3$iso3[iso3$Country == country_full]
 #Example "SSD"
 
@@ -27,26 +26,47 @@ pres_date <- Sys.Date()
 
 
 ---
-title: `r pres_title`
+title: `r pres_title` Rix Spotlight
 ---
-## RiX Spotlight for Humanitarian Needs Overview
+## For Humanitarian Needs Overview
 
 
 
-```{r fig.align="right", message=FALSE, out.width="20%"}
+```{r  country and flag , message=FALSE,fig.align="right", out.width="20%"}
 library(geodata)
-a<-gadm(country_iso, level = 0, path=tempdir())
-plot(a, col= "dodgerblue2", axes=FALSE)
+library(ggflags)
+library(ggplot2)
+library(ggthemes)
+library(sf)
+#Coutnry shapefile
+country_gadm <-gadm(country_iso,level=2, path= tempdir()) %>%
+  st_as_sf
+adm_plot <- ggplot(country_gadm, lwd= 0.15) +
+  geom_sf(fill = "steelblue2")+theme_void()
+adm_plot
 
 ```
 
-```{r Combining tables, include = FALSE}
-#Define df for matching numeric class with string class
-Rank_class_df <- data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
-Rank_class_df$Class_levels <- factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
+## Basic Risk Data
+```{r Global Indices Tables - Combining tables,}
+
+#-------WORLD BANK------
+oldnames <- c("Indicator")
+newnames <- c("Index")
+
+country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
+  do.call(rbind,.) %>%
+  mutate(Indicator = row.names(.)) %>% 
+  #plyr::join(., Rank_class_df, by="Rank_class") %>%
+  select("Indicator", "Value","Year", "Rank","Rank_out_of", "Rank_class") %>%
+  arrange(Indicator) %>%
+  left_join(.,Wbank_codes_desc, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
+  mutate(across(everything(), as.vector)) %>% #remove any attribute label
+  rename_at(vars(oldnames), ~ newnames) 
 
 
-#INFORM
+
+#------INFORM-----
 country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
   do.call(rbind, .) %>%
   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
@@ -57,60 +77,57 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   #plyr::join(., Rank_class_df, by="Rank_class") %>%
   filter(complete.cases(.)) %>%
   left_join(.,Inform_codes_desc, by = c("Index" = "INFORM.Id")) %>% #add description and source
-  mutate(Source = "DRMKC INFORM, Mid 2022", Year = year) #adapt as variable!
-
-
-#WORLD BANK
-country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
-  do.call(rbind,.) %>%
-  mutate(Indicator = row.names(.)) %>% 
-  #plyr::join(., Rank_class_df, by="Rank_class") %>%
-  select("Indicator", "Value","Year", "Rank","Rank_out_of", "Rank_class") %>%
-  arrange(Indicator) %>%
-  left_join(.,Wbank_codes_desc, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
-  mutate(across(everything(), as.vector)) %>% #remove any attribute label
-  rename(Index = Indicator)
-
-
-#Combine WORLDBANK and INFORM datasets
-country_all <- plyr::rbind.fill(country_inform,country_wbank) %>%
-  plyr::join(., Rank_class_df, by="Rank_class") %>%
-  mutate(Group = case_when(grepl("INFORM", Index) == TRUE ~ "a) Risk Index",
-         grepl("HA|FRST|PRCP|ATM| ", Index) == TRUE ~ "b) Hazards & Exposure", 
-         grepl("VU|MORT|VUL|EMP|UEM ", Index) == TRUE ~ "c) Vulnerability", 
-         grepl("CC", Index) == TRUE ~ "d) Lack fo Coping Capacity")) %>%
-  mutate(Description = " ") %>%
-  arrange(Group)
-
-
-#ADM shapefiles, group by iso3cd-------
-adm.country<-adm_group[adm_group$iso == country_iso,] %>%
-  {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
-  t %>%
-  data.frame() %>%
-  round(.,2) %>%
-  `colnames<-`("Mean Value") %>%
-  mutate(Code = row.names(.)) %>%
-  left_join(.,adm_labels, by = c("Code" = "GDLCODE")) %>%
-  select("Description", "Mean Value") %>%
-  filter(complete.cases(.))
+  mutate(Source = dataset, Year = inform_year)
   
 
-```
 
-## Basic Risk Data
-```{r Global Indices Table}
+#-----Combine WORLDBANK and INFORM datasets-------
+#function to group indicators/incides
+indicator_group <-function(indicator){
+ if(grepl("INFORM", indicator) == TRUE ){
+   grp <- "Risk Index"
+ } else if (grepl("HA|FRST|PRCP|ATM| ", indicator) == TRUE){
+   grp <- "Hazards & Exposure"
+ } else if (grepl("VU|MORT|VUL|EMP|UEM ", indicator) == TRUE){
+   grp <- "Vulnerability"
+ } else if (grepl("CC", indicator) == TRUE){
+   grp <-"Lack of Coping Capacity"
+ } else {
+  grp <-"To be classified"
+ }
+}
+
+#Define df for matching numeric class with string class
+Rank_class_df <- data.frame(Rank_class = 1:5, Class_levels = as.factor(c("Very Low","Low","Moderate","High","Very High")))
+Rank_class_df$Class_levels <- factor(Rank_class_df$Class_levels ,levels = c("Very Low","Low","Moderate","High","Very High"))
+
+#order or groupings for table:
+target_grp <- c("Risk Index", "Hazards & Exposure", "Vulnerability", "Lack of Coping Capacity", "Others -to be classified") 
+
+country_all <- plyr::rbind.fill(country_inform, country_wbank) %>%
+  plyr::join(., Rank_class_df, by="Rank_class") %>%
+  mutate(Rank = paste(Rank, Rank_out_of, sep = "/")) %>%
+  mutate(Description = " ") %>%
+  mutate(Group = sapply(.$Index, indicator_group))%>%
+  arrange(factor(Group, levels = target_grp)) %>%
+  rename_at(vars(c("Indicator.Name","Class_levels")),~ c("Indicator Name","Comparative Value"))
+
+
+
+###------------------------TABLE---------------------------------------------------------------------------
 library(kableExtra)
+library(forcats)
 source("./Spotlight_plotting_functions.R")
 #------Combined WBANK+INFORM table plot---------
 #tile color
-country_all$Class_levels <-  color_tile2(c("forestgreen",'lightgoldenrod2', "firebrick1"))(country_all$Class_levels)
+country_all$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(country_all$`Comparative Value`) #c("#9DBF9E", "#FCB97D", "#A84268")
 
-country_all[c(5,2:3,10,7,8,6)] %>%
+country_all[c("Indicator Name","Description","Value","Year","Rank","Comparative Value","Source")] %>%
+  tibble()%>%
   kbl(escape=F) %>%
   kable_paper("striped", full_width = F) %>%
-  column_spec(c(4,7), width_min = c("8cm","5cm"), width_max = c("8cm","5cm")) %>%
-  pack_rows(index = table(country_all$Group)) # %>%
+  column_spec(c(2,7), width_min = c("8cm","5cm"), width_max = c("8cm","5cm")) %>%
+  pack_rows(index = table(fct_inorder(country_all$Group))) # %>%
   # add_indent(row.ind1 , level_of_indent = 1) %>%
   # add_indent(row.ind2 , level_of_indent = 2) %>%
   #add_header_above(c("Basic Risk Data" =7), font_size = "medium")
@@ -119,11 +136,56 @@ country_all[c(5,2:3,10,7,8,6)] %>%
 
 ## Country Statistics
 ```{r Country Stats table, message=FALSE, warning=FALSE}
-# #table shapefile
-adm.country %>%
-  kbl() %>%
-  kable_paper("striped", full_width = T) %>%
-  column_spec(1:2, width = c("2cm","3cm")) 
+
+#--------ADM shapefiles, group by iso3cd-------
+#function changing rank to string:
+Ranking <- function(Rank, Rank_out_of){
+  if(!is.na(Rank) == TRUE){
+    paste(Rank, Rank_out_of, sep = "/")
+    } else {
+      NA
+    }
+}
+
+#Subest table
+var_select <-c("Category", "Description", "Mean_Value", "Rank", "Rank_out_of","Class_levels", "Year_of_Publication", "Organisation", "URL")
+#Grouping names
+target_adm <- c("Hazard", "Exposure", "Vulnerability", "Climate Change")
+
+## changing headers for table:
+oldnames <- c("Class_levels", "Year_of_Publication", "Mean_Value")
+newnames <- c("Comparative Value", "Year of Publication", "Mean Value")
+
+
+adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>%
+  lapply(., data.frame, check.names=FALSE) %>%
+  do.call(cbind, .) %>%
+  `colnames<-`(c("Mean_Value", "Rank", "Rank_out_of","Rank_class")) %>%
+  mutate(Rank = mapply(function(x,y) Ranking(x,y), Rank,Rank_out_of)) %>%
+  mutate(Codes = rownames(.)) %>%
+  select(Codes, Mean_Value, Rank, Rank_out_of, Rank_class) %>%
+  plyr::join(., Rank_class_df, by="Rank_class") %>%
+  mutate(Mean_Value = round(Mean_Value,2) ) %>%
+  #mutate(Rank_class  = ifelse(is.na(Rank_class)==TRUE,1,Rank_class)) %>% # to deal with NAs in Rank, for plotting later
+  left_join(., adm_sources, by = c("Codes" = "GDLCODE")) %>% #add description and source
+  select(var_select) %>%
+  rename_at(vars(oldnames), ~ newnames) %>%
+  mutate(Organisation = paste0(Organisation," (",URL,")" )) %>%
+  arrange(factor(Category, levels = target_adm)) %>%
+  filter(complete.cases(Category))
+
+
+#----------------------------------TABLE-----------------------------------------------------------
+#tile color
+adm_country$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(adm_country$`Comparative Value`)
+  
+  
+#table shapefile
+adm_country[c(2,3,4,6,7,8)] %>%
+  kbl(escape=F) %>%
+  kable_paper("striped", full_width = F) %>%
+  column_spec(c(1,6), width_min = c("8cm","5cm"), width_max = c("8cm","5cm")) %>%
+  pack_rows(index = table(fct_inorder(adm_country$Category)))
 # %>%
 #   add_header_above(c("Country Statistics" = 2), font_size = "medium")
 

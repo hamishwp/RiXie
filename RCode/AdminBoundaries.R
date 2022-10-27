@@ -133,10 +133,7 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 #--------Some data manipulation + analysis on ADM shapefile-----------
 library(sf)
 library(dplyr)
-
-options(scipen = 999)   
-load("codes_desc.RData")
-
+ 
 #shapefile
 adm<- adm %>%
   st_drop_geometry() %>%
