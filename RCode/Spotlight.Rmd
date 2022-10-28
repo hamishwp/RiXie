@@ -26,13 +26,13 @@ pres_date <- Sys.Date()
 
 
 ---
-title: `r pres_title` Rix Spotlight
+title: `r pres_title` RiX Spotlight
 ---
 ## For Humanitarian Needs Overview
 
 
 
-```{r  country and flag , message=FALSE,fig.align="right", out.width="20%"}
+```{r  country and flag , message=FALSE,fig.align="right", out.width="30%"}
 library(geodata)
 library(ggflags)
 library(ggplot2)
@@ -120,17 +120,33 @@ library(forcats)
 source("./Spotlight_plotting_functions.R")
 #------Combined WBANK+INFORM table plot---------
 #tile color
-country_all$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(country_all$`Comparative Value`) #c("#9DBF9E", "#FCB97D", "#A84268")
+#country_all$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(country_all$`Comparative Value`) #c("#9DBF9E", "#FCB97D", "#A84268")
+
+#Rows from inform need indentation (sublevels)
+inform_row_indent <- function(df, level){
+  df %>%  
+  mutate(row=row_number()) %>% 
+  filter(grepl("INFORM", Source)) %>% 
+  filter(str_count(Index, '\\.') == level) %>%
+  select(row) %>%
+  unlist(.) %>%
+  unname(.)
+}
+
+ind1 <- inform_row_indent(country_all,level=1)
+ind2 <-  inform_row_indent(country_all,level=2)
+
 
 country_all[c("Indicator Name","Description","Value","Year","Rank","Comparative Value","Source")] %>%
   tibble()%>%
-  kbl(escape=F) %>%
-  kable_paper("striped", full_width = F) %>%
-  column_spec(c(2,7), width_min = c("8cm","5cm"), width_max = c("8cm","5cm")) %>%
-  pack_rows(index = table(fct_inorder(country_all$Group))) # %>%
-  # add_indent(row.ind1 , level_of_indent = 1) %>%
-  # add_indent(row.ind2 , level_of_indent = 2) %>%
-  #add_header_above(c("Basic Risk Data" =7), font_size = "medium")
+  kbl(escape=F, align = 'lcccrcl') %>%
+  kable_paper("striped", full_width = T, font_size = 13) %>%
+  column_spec(c(1,2,7), width_min = c("6cm","6cm","5cm"), width_max = c("15cm","6cm","5cm")) %>%
+  pack_rows(index = table(fct_inorder(country_all$Group))) %>%
+  column_spec(6, color = "white",
+              background = spec_color(as.numeric(country_all$`Comparative Value`),alpha = 0.75, end = 0.4, option = "inferno")) %>%
+  add_indent(ind1, level_of_indent = 0.5) %>%
+  add_indent(ind2, level_of_indent = 1) 
 ```
 
 
@@ -147,8 +163,8 @@ Ranking <- function(Rank, Rank_out_of){
     }
 }
 
-#Subest table
-var_select <-c("Category", "Description", "Mean_Value", "Rank", "Rank_out_of","Class_levels", "Year_of_Publication", "Organisation", "URL")
+#Subset table
+var_select <-c("Category", "Description", "Mean_Value","Year_of_Publication", "Rank", "Rank_out_of","Class_levels", "Organisation", "URL")
 #Grouping names
 target_adm <- c("Hazard", "Exposure", "Vulnerability", "Climate Change")
 
@@ -177,15 +193,17 @@ adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>
 
 #----------------------------------TABLE-----------------------------------------------------------
 #tile color
-adm_country$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(adm_country$`Comparative Value`)
-  
+# adm_country$`Comparative Value` <- ifelse(is.na(adm_country$`Comparative Value`),NA,color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(adm_country$`Comparative Value`))
+#   
   
 #table shapefile
-adm_country[c(2,3,4,6,7,8)] %>%
-  kbl(escape=F) %>%
-  kable_paper("striped", full_width = F) %>%
+adm_country[c(2,3,4,5,7,8)] %>%
+   kbl(escape=F, align = 'lccccl') %>%
+  kable_paper("striped", full_width = T, font_size = 13) %>%
   column_spec(c(1,6), width_min = c("8cm","5cm"), width_max = c("8cm","5cm")) %>%
-  pack_rows(index = table(fct_inorder(adm_country$Category)))
+  pack_rows(index = table(fct_inorder(adm_country$Category))) %>%
+  column_spec(5, color = "white",
+              background = spec_color(as.numeric(adm_country$`Comparative Value`),alpha = 0.75, end = 0.4, option = "inferno"))
 # %>%
 #   add_header_above(c("Country Statistics" = 2), font_size = "medium")
 
