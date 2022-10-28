@@ -49,10 +49,9 @@ adm_plot
 
 ## Basic Risk Data
 ```{r Global Indices Tables - Combining tables,}
-
 #-------WORLD BANK------
-oldnames <- c("Indicator")
-newnames <- c("Index")
+oldnames <- c("Indicator", "Year")
+newnames <- c("Index", "Year of Publication")
 
 country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   do.call(rbind,.) %>%
@@ -62,7 +61,9 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   arrange(Indicator) %>%
   left_join(.,Wbank_codes_desc, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
   mutate(across(everything(), as.vector)) %>% #remove any attribute label
-  rename_at(vars(oldnames), ~ newnames) 
+  rename_at(vars(oldnames), ~ newnames) %>%
+  mutate(URL = as.character("https://data.worldbank.org/"))
+  
 
 
 
@@ -77,24 +78,29 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   #plyr::join(., Rank_class_df, by="Rank_class") %>%
   filter(complete.cases(.)) %>%
   left_join(.,Inform_codes_desc, by = c("Index" = "INFORM.Id")) %>% #add description and source
-  mutate(Source = dataset, Year = inform_year)
-  
+  mutate(Source = dataset, `Year of Publication` = inform_year) %>%
+  mutate(URL = as.character("https://drmkc.jrc.ec.europa.eu/inform-index")) %>%
+  mutate(Unit = as.character("scale 0-10"))
+```
 
 
+```{r Global Indices Tables - Combining tables,}
 #-----Combine WORLDBANK and INFORM datasets-------
 #function to group indicators/incides
 indicator_group <-function(indicator){
  if(grepl("INFORM", indicator) == TRUE ){
    grp <- "Risk Index"
  } else if (grepl("HA|FRST|PRCP|ATM| ", indicator) == TRUE){
-   grp <- "Hazards & Exposure"
- } else if (grepl("VU|MORT|VUL|EMP|UEM ", indicator) == TRUE){
-   grp <- "Vulnerability"
- } else if (grepl("CC", indicator) == TRUE){
-   grp <-"Lack of Coping Capacity"
+   grp <- "Hazard"
  } else {
-  grp <-"To be classified"
+   grp <- "Vulnerability"
  }
+  
+ #  else if (grepl("VU|MORT|VUL|EMP|UEM|CC ", indicator) == TRUE){
+ #   grp <- "Vulnerability"
+ # } else {
+ #  grp <-"To be classified"
+ # }
 }
 
 #Define df for matching numeric class with string class
@@ -106,14 +112,16 @@ target_grp <- c("Risk Index", "Hazards & Exposure", "Vulnerability", "Lack of Co
 
 country_all <- plyr::rbind.fill(country_inform, country_wbank) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
-  mutate(Rank = paste(Rank, Rank_out_of, sep = "/")) %>%
+  #mutate(Rank = paste(Rank, Rank_out_of, sep = "/")) %>%
+  select(-Rank_class) %>%
   mutate(Description = " ") %>%
-  mutate(Group = sapply(.$Index, indicator_group))%>%
-  arrange(factor(Group, levels = target_grp)) %>%
-  rename_at(vars(c("Indicator.Name","Class_levels")),~ c("Indicator Name","Comparative Value"))
+  mutate(Category = sapply(.$Index, indicator_group)) %>%
+  arrange(factor(Category, levels = target_grp)) %>%
+  rename_at(vars(c("Indicator.Name","Class_levels")),~ c("Index_name","Comparative Value"))
+```
 
 
-
+```{r Global Indices Tables - Combining tables,}
 ###------------------------TABLE---------------------------------------------------------------------------
 library(kableExtra)
 library(forcats)
@@ -137,12 +145,12 @@ ind1 <- inform_row_indent(country_all,level=1)
 ind2 <-  inform_row_indent(country_all,level=2)
 
 
-country_all[c("Indicator Name","Description","Value","Year","Rank","Comparative Value","Source")] %>%
+country_all[c("Index_name","Description","Value","Year of Publication","Rank","Comparative Value","Source")] %>%
   tibble()%>%
   kbl(escape=F, align = 'lcccrcl') %>%
   kable_paper("striped", full_width = T, font_size = 13) %>%
   column_spec(c(1,2,7), width_min = c("6cm","6cm","5cm"), width_max = c("15cm","6cm","5cm")) %>%
-  pack_rows(index = table(fct_inorder(country_all$Group))) %>%
+  pack_rows(index = table(fct_inorder(country_all$Category))) %>%
   column_spec(6, color = "white",
               background = spec_color(as.numeric(country_all$`Comparative Value`),alpha = 0.75, end = 0.4, option = "inferno")) %>%
   add_indent(ind1, level_of_indent = 0.5) %>%
@@ -164,20 +172,20 @@ Ranking <- function(Rank, Rank_out_of){
 }
 
 #Subset table
-var_select <-c("Category", "Description", "Mean_Value","Year_of_Publication", "Rank", "Rank_out_of","Class_levels", "Organisation", "URL")
+var_select <-c("Codes","Category", "Description", "Mean_Value","Year_of_Publication", "Rank", "Rank_out_of","Class_levels", "Organisation", "URL")
 #Grouping names
 target_adm <- c("Hazard", "Exposure", "Vulnerability", "Climate Change")
 
 ## changing headers for table:
-oldnames <- c("Class_levels", "Year_of_Publication", "Mean_Value")
-newnames <- c("Comparative Value", "Year of Publication", "Mean Value")
+oldnames <- c("Class_levels", "Year_of_Publication", "Mean_Value", "Organisation", "Codes", "Description")
+newnames <- c("Comparative Value", "Year of Publication", "Value", "Source", "Index", "Index_name") ##it's the mean value per country but labeling as `Value` to be same as basic risk data table column names 
 
 
 adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>%
   lapply(., data.frame, check.names=FALSE) %>%
   do.call(cbind, .) %>%
   `colnames<-`(c("Mean_Value", "Rank", "Rank_out_of","Rank_class")) %>%
-  mutate(Rank = mapply(function(x,y) Ranking(x,y), Rank,Rank_out_of)) %>%
+  #mutate(Rank = mapply(function(x,y) Ranking(x,y), Rank,Rank_out_of)) %>%
   mutate(Codes = rownames(.)) %>%
   select(Codes, Mean_Value, Rank, Rank_out_of, Rank_class) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
@@ -186,7 +194,7 @@ adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>
   left_join(., adm_sources, by = c("Codes" = "GDLCODE")) %>% #add description and source
   select(var_select) %>%
   rename_at(vars(oldnames), ~ newnames) %>%
-  mutate(Organisation = paste0(Organisation," (",URL,")" )) %>%
+  mutate(Source = paste0(Source," (",URL,")" )) %>%
   arrange(factor(Category, levels = target_adm)) %>%
   filter(complete.cases(Category))
 
@@ -210,6 +218,17 @@ adm_country[c(2,3,4,5,7,8)] %>%
 ```
 
 
+```{r}
+
+#--------------------MERGE basic risk and country stats df----------
+all<-plyr::rbind.fill(country_all,adm_country) %>%
+  mutate(Description = as.character(paste0("The ", Index_name," for ", country_full," is estimated to be ",
+                                           Value, " (units), which is considered as ", `Comparative Value`," risk as compared to ",
+                                           Rank_out_of," other countries. Additionally, ",country_full," ranks at ",Rank," out of ",Rank_out_of,
+                                           " around the world. These estimates were taken from ",Source,", made in ",`Year of Publication`,". (", URL,")"))) %>%
+  filter(!grepl("HA.",Index))
+
+```
 
 
 
