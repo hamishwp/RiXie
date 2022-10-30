@@ -225,7 +225,7 @@ all_indi<-data.frame(wb_indicators())
 Wbank_codes_desc<-read.csv("/home/coleen/Documents/GitHub/GRAF_files/WB_indicators.csv", header=TRUE) %>%
   filter(For.country.profile.page..Y.N.=="Y") %>%
   select(Variable.API.Name, Indicator.Name) %>%
-  mutate(Source = all_indi[match(Variable.API.Name,all_indi$indicator_id),"source_org"])
+  mutate(Source = all_indi[match(Variable.API.Name,all_indi$indicator_id),"source"]) #or source_org?
 
 indicator_id<-Wbank_codes_desc$Variable.API.Name
 
