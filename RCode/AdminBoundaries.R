@@ -126,11 +126,7 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 #   
 # }
 
-
-
-
-
-#--------Some data manipulation + analysis on ADM shapefile-----------
+#--------data manipulation + analysis on ADM shapefile-----------
 library(sf)
 library(dplyr)
  
@@ -165,11 +161,4 @@ Adm_cRank <- function(data){
   return(list_all)
 }
 
-
 adm_ranks<-Adm_cRank(adm_group)
-
-#Header labels
-#adm_labels <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/Field_Names.csv",header=T)
-
-#Adm sources:
-#adm_sources <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/MappingDataSources.csv",header=T)

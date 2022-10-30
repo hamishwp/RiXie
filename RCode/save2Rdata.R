@@ -13,4 +13,14 @@ Inform_codes_desc <- read.csv("/home/coleen/Documents/GitHub/GRAF_files/INFORM_c
 Wbank_codes_desc<-data.frame(wbstats::wb_indicators())
 
 
+
+
+
+#----------------shapefile adm labels---------------------------------------
+#adm_labels <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/Field_Names.csv",header=T)
+
+#--------------Adm sources-------------------------------------------------
+#adm_sources <-read.csv("/home/coleen/Documents/GitHub/RiXie/Data/Spatial/MappingDataSources.csv",header=T)
+
+
 save.image(file="codes_desc.RData")
