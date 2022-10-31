@@ -54,7 +54,7 @@ library(ggplot2)
 library(ggthemes)
 library(sf)
 #Coutnry shapefile
-country_gadm <-gadm(country_iso,level=1, path= tempdir()) %>%
+country_gadm <-gadm(country_iso,level=2, path= tempdir()) %>%
   st_as_sf
 adm_plot <- ggplot(country_gadm, lwd= 0.15) +
   geom_sf(fill = "steelblue2") + theme_void()
@@ -80,7 +80,10 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   mutate(across(everything(), as.vector)) %>% #remove any attribute label
   rename_at(vars(oldnames), ~ newnames) %>%
   mutate(URL = as.character("https://data.worldbank.org/")) %>%
-  mutate(Unit = as.character(""))
+  mutate(Unit = str_match(Indicator.Name, "\\((.*)\\)")[,1]) %>%
+  mutate(Unit  = ifelse(is.na(Unit)==TRUE, as.character("(-)"), Unit)) %>%
+  mutate(Indicator.Name = unlist(strsplit(.$`Indicator.Name`," \\(.*\\)")))
+ 
 
 #------INFORM-----
 country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
@@ -236,7 +239,8 @@ all<-plyr::rbind.fill(country_all,adm_country) %>%
                                            " around the world. These estimates were taken from ",Source,", made in ",`Year of Publication`,". (", URL,")"))) %>%
   rename(Name = Index_name) %>%
   arrange(factor(Category, levels = target_grp), Name) %>%
-  filter(!grepl("HA",Index))
+  filter(!grepl("HA",Index)) %>%
+  filter(complete.cases(.)) #remove columns that contains Any NA. - complete.cases
 
 #table big
 all[c(5,10,11)] %>%
