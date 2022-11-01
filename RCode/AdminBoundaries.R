@@ -141,7 +141,6 @@ adm_group <- aggregate(x = adm[,which(sapply(adm, class) == "numeric")], by = li
   rename_at(1,~"iso") 
 
 #Rank based on the current number of countries in the shapefile.......
-
 Adm_cRank <- function(data){
   len <- nrow(data)
   iso3 <- data$iso

@@ -1,18 +1,17 @@
 ```{r setting options and loading data, include=FALSE}
 knitr::opts_chunk$set(echo =FALSE, message=FALSE, warning=FALSE)
-
-load("codes_desc.RData") #returns error, but seems to be working!
-sys.source("./GetWorldBank.R", envir = knitr::knit_global())
-sys.source("./GetINFORM.R", envir = knitr::knit_global())
-sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
+source("./GeneralFunctions.R")
+# 
+# load("codes_desc.RData") #returns error, but seems to be working!
+# sys.source("./GetWorldBank.R", envir = knitr::knit_global())
+# sys.source("./GetINFORM.R", envir = knitr::knit_global())
+# sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
 ```
 
 ```{r selecting country}
 #country select
-# country_full <- "Madagascar"
-# country_iso <- iso3$iso3[iso3$Country == country_full]
-#Example "SSD"
-
+country_iso <-"AGO"
+country_full <- convIso3Country(country_iso)
 pres_title <- country_full
 pres_date <- Sys.Date()
 ```
@@ -27,45 +26,73 @@ output:
 <style type="text/css">
 h1.title {
   font-size: 50px;
-  color: Grey;
-  text-align: right;
+  color:  #000000;
+  text-align: center;
 }
 h3.subtitle {
   font-size: 30px;
-  color: Grey;
-  text-align: right;
+  color:  #000000;
+  text-align: center;
 }
 .table-hover > tbody > tr:hover { 
   background-color: #f7f7e6;
 }
 .main-container {
+ zoom:70%;
   width: 80%;
-    max-width: unset;
+    max-width:80%;
   }
 </style>
 
-
-<div style= "float:left; position:relative; top:-100px;margin-bottom:-100px;margin-left:-10px;">
-```{r  country and flag , message=FALSE, out.width="25%"}
-#,out.extra='style="float: left"'
-library(geodata)
-library(ggflags)
-library(ggplot2)
-library(ggthemes)
-library(sf)
-#Coutnry shapefile
-country_gadm <-gadm(country_iso,level=1, path= tempdir()) %>%
-  st_as_sf
-adm_plot <- ggplot(country_gadm, lwd= 0.15) +
-  geom_sf(fill = "steelblue2") + theme_void()
-adm_plot
-
-#plot flag
+```{r RiX logo}
+htmltools::img(src = knitr::image_uri("/home/coleen/Documents/GRAF_files/GRAF-RIX_Map-E _tall.svg"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; left:8; padding:10px;')
 
 ```
-</div>
-<!-- ## Basic Risk Data -->
-```{r Global Indices Tables}
+
+
+```{r Map design, message=FALSE, warning=FALSE,include=FALSE}
+#,out.extra='style="float: left"'
+# library(geodata)
+# library(ggflags)
+# library(ggplot2)
+# library(ggthemes)
+# library(sf)
+# #Coutnry shapefile
+# country_gadm <-GetUNMaps(country_iso) %>% #gadm(country_iso,level=2, path= tempdir()) %>%
+#   st_as_sf
+# adm_plot <- ggplot(country_gadm, lwd= 0.15) +
+#   geom_sf(fill = "steelblue2") + theme_void()
+# adm_plot
+
+library(ggmap)
+
+bbox<-countriesbbox(country_iso)
+# we want longitude to be three times wider than latitude
+disty<-c(bbox[3]-bbox[1],bbox[4]-bbox[2])
+if(disty[1]<3*disty[2]){
+  bbox[1]<-bbox[1]+0.5*disty[1]-1.5*disty[2]
+  bbox[3]<-bbox[3]-0.5*disty[1]+1.5*disty[2]
+} else{
+  bbox[2]<-bbox[2]+0.5*disty[2]-disty[1]/6
+  bbox[4]<-bbox[4]-0.5*disty[2]+disty[1]/6
+}
+
+# Add some padding to the plot
+bbox%<>%expandBbox(1.5)
+
+mad_map <- get_stamenmap(bbox,source = "terrain-background", zoom=9)
+
+country_gadm<-GetUNMaps(country_iso)
+
+p<-ggmap(mad_map, maprange=FALSE) 
+
+
+```
+
+
+```{r Basic Risk Data-Indices Tables}
 #-------WORLD BANK------
 oldnames <- c("Indicator", "Year")
 newnames <- c("Index", "Year of Publication")
@@ -80,7 +107,10 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   mutate(across(everything(), as.vector)) %>% #remove any attribute label
   rename_at(vars(oldnames), ~ newnames) %>%
   mutate(URL = as.character("https://data.worldbank.org/")) %>%
-  mutate(Unit = as.character(""))
+  mutate(Unit = str_match(Indicator.Name, "\\((.*)\\)")[,1]) %>%
+  mutate(Unit  = ifelse(is.na(Unit)==TRUE, as.character("(-)"), Unit)) %>%
+  mutate(Indicator.Name = unlist(strsplit(.$`Indicator.Name`," \\(.*\\)")))
+ 
 
 #------INFORM-----
 country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
@@ -96,9 +126,7 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   mutate(Source = dataset, `Year of Publication` = inform_year) %>%
   mutate(URL = as.character("https://drmkc.jrc.ec.europa.eu/inform-index")) %>%
   mutate(Unit = as.character("(scale 0-10)"))
-```
 
-```{r Combining tables}
 #-----Combine WORLDBANK and INFORM datasets-------
 #function to group indicators/incides
 indicator_group <-function(indicator){
@@ -124,7 +152,7 @@ Rank_class_df$Class_levels <- factor(Rank_class_df$Class_levels ,levels = c("Ver
 #order or groupings for table:
 target_grp <- c("Risk Index", "Hazard","Exposure", "Vulnerability","Others -to be classified") 
 
-country_all <- plyr::rbind.fill(country_inform, country_wbank) %>%
+Wbank_inform_combi <- plyr::rbind.fill(country_inform, country_wbank) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   #mutate(Rank = paste(Rank, Rank_out_of, sep = "/")) %>%
   select(-Rank_class) %>%
@@ -134,8 +162,8 @@ country_all <- plyr::rbind.fill(country_inform, country_wbank) %>%
   rename_at(vars(c("Indicator.Name","Class_levels")),~ c("Index_name","Comparative Value"))
 ```
 
-```{r, include=FALSE}
-###------------------------TABLE---------------------------------------------------------------------------
+```{r Table Wbank_inform_combi, include=FALSE}
+#--table---
 library(kableExtra)
 library(forcats)
 source("./Spotlight_plotting_functions.R")
@@ -169,8 +197,7 @@ ind2 <-  inform_row_indent(country_all,level=2)
 #   add_indent(ind2, level_of_indent = 1) 
 ```
 
-<!-- ## Country Statistics -->
-```{r Country Stats table, message=FALSE, warning=FALSE, include=FALSE}
+```{r Country Stats from ADM shapefile, message=FALSE, warning=FALSE, include=FALSE}
 
 #--------ADM shapefiles, group by iso3cd-------
 #function changing rank to string:
@@ -208,7 +235,7 @@ adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>
   arrange(factor(Category, levels = target_adm)) %>%
   filter(complete.cases(Category))
 
-#----------------------------------TABLE-----------------------------------------------------------
+#---table---
 #tile color
 # adm_country$`Comparative Value` <- ifelse(is.na(adm_country$`Comparative Value`),NA,color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(adm_country$`Comparative Value`))
 #   
@@ -225,18 +252,36 @@ adm_country[c(2,3,4,5,7,8)] %>%
 #   add_header_above(c("Country Statistics" = 2), font_size = "medium")
 ```
 
+<!-- PLOTS AND TABLES from HERE: -->
 
-```{r}
-#--------------------MERGE basic risk and country stats dfs----------
-all<-plyr::rbind.fill(country_all,adm_country) %>%
+<!-- <div style="float:right; position:relative; top:-150px;margin-bottom:-100px;margin-right:10px;"> -->
+```{r COUNTRY MAP plot, message=FALSE, warning=FALSE, fig.align='center',fig.width=15,fig.height=8}
+p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes = FALSE) +
+  xlab("Longitude") + ylab("Latitude") +
+  theme(legend.position="none", #+ scale_fill_viridis(discrete = TRUE,option = "G");p
+        panel.background = element_rect(fill='transparent'),
+        plot.background = element_rect(fill='transparent', color=NA),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.background = element_rect(fill='transparent'),
+        legend.box.background = element_rect(fill='transparent')
+  )
+
+```
+<!-- </div> -->
+
+```{r FINAL MERGED DFs AND TABLE PLOT}
+#---------------MERGE wbank_inform_combi and adm_country stats dfs---------
+all<-plyr::rbind.fill(Wbank_inform_combi,adm_country) %>%
   mutate(URL =paste0("[",URL, "](", URL, ")")) %>%
   mutate(Description = as.character(paste0("The ", tolower(Index_name)," ",Unit," for ", country_full," is estimated to be ",
-                                           Value, ", which is considered as ", `Comparative Value`," risk as compared to ",
+                                           Value, ", which is considered as ", tolower(`Comparative Value`)," risk as compared to ",
                                            Rank_out_of," other countries. Additionally, ",country_full," ranks at ",Rank," out of ",Rank_out_of,
                                            " around the world. These estimates were taken from ",Source,", made in ",`Year of Publication`,". (", URL,")"))) %>%
   rename(Name = Index_name) %>%
   arrange(factor(Category, levels = target_grp), Name) %>%
-  filter(!grepl("HA",Index))
+  filter(!grepl("HA",Index)) %>%
+  filter(complete.cases(.)) #remove columns that contains Any NA. - complete.cases
 
 #table big
 all[c(5,10,11)] %>%
