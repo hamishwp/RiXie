@@ -229,17 +229,17 @@ Wbank_codes_desc<-read.csv("/home/coleen/Documents/GRAF_files/WB_indicators.csv"
 
 indicator_id<-Wbank_codes_desc$Variable.API.Name
 
-#Still use list of indicators_id to match full names in next step
-WB_data_all<-list()
-for(i in seq_along(indicator_id)){
-  if(is.na(indicator_id[[i]]) == FALSE){
-    WB_data_all[[i]]<-indicator_id[[i]] %>%
-      WBcall(syear = 2010, fyear = 2022) %>%
-      CountryRankIndices() 
-}
-}
-
-names(WB_data_all)<-indicator_id[1:length(WB_data_all)]
-WB_data_all<- delete.NULLs(WB_data_all)
-
+# #Still use list of indicators_id to match full names in next step
+# WB_data_all<-list()
+# for(i in seq_along(indicator_id)){
+#   if(is.na(indicator_id[[i]]) == FALSE){
+#     WB_data_all[[i]]<-indicator_id[[i]] %>%
+#       WBcall(syear = 2010, fyear = 2022) %>%
+#       CountryRankIndices() 
+# }
+# }
+# 
+# names(WB_data_all)<-indicator_id[1:length(WB_data_all)]
+# WB_data_all<- delete.NULLs(WB_data_all)
+# 
 

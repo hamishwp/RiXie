@@ -252,7 +252,7 @@ Inform_all_df<- Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.
   
 
 #add ranks
-Country_with_ranks <- Inform_cRank(Inform_all_df)
+Inform_country_with_ranks <- Inform_cRank(Inform_all_df)
 
 
 ##Add unit for indices, append to name

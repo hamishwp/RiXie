@@ -3,7 +3,8 @@ knitr::opts_chunk$set(echo =FALSE, message=FALSE, warning=FALSE)
 # source("./GeneralFunctions.R")
 # source("./AdminBoundaries.R")
 
-load("./codes_desc.RData")
+load("/home/coleen/Documents/GitHub/RiXie/Data/codes_desc.RData")
+load("/home/coleen/Documents/GitHub/RiXie/Data/Spotlight_data.RData")
 sys.source("./GetWorldBank.R", envir = knitr::knit_global())
 sys.source("./GetINFORM.R", envir = knitr::knit_global())
 sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
@@ -12,7 +13,7 @@ sys.source("./GeneralFunctions.R",envir = knitr::knit_global())
 
 ```{r selecting country}
 #country select
-country_iso <-"COM"
+# country_iso <-"COM"
 
 country_full <- convIso3Country(country_iso)
 pres_title <- country_full
@@ -40,7 +41,7 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
  
 
 #------INFORM-----
-country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
+country_inform <- lapply(Inform_country_with_ranks, function(x) x[x$iso == country_iso,]) %>% #remove the iso column
   do.call(rbind, .) %>%
   {`[`(.[,-1])} %>% #remove column 1, which is the iso3 column
   t  %>%
@@ -180,8 +181,14 @@ adm_country[c(2,3,4,5,7,8)] %>%
 ```
 
 
-```{r Map design, message=FALSE, warning=FALSE,include=FALSE}
+```{r Map design, include=FALSE}
+library(ggplot2)
 library(ggmap)
+knitr::opts_chunk$set(dev.args=list(bg="transparent"))
+theme_set(theme_bw(base_size=12)) 
+theme_update(panel.background = element_rect(fill = "transparent", colour = NA),
+             plot.background = element_rect(fill = "transparent", colour = NA))
+
 
 bbox<-countriesbbox(country_iso)
 # we want longitude to be three times wider than latitude
@@ -203,6 +210,8 @@ country_gadm<-GetUNMaps(country_iso)
 
 p<-ggmap(mad_map, maprange=FALSE) 
 
+bg_fill<-"#f5f7fb"
+
 
 ```
 
@@ -210,13 +219,13 @@ p<-ggmap(mad_map, maprange=FALSE)
 
 ---
 title: `r pres_title` RiX Spotlight
-subtitle: "For Humanitarian Needs Overview"
+subtitle: "Disaster Risk Data Overview"
 output:
   html_document:
       css: styles.css
 ---
 
-<body style="background-color:#f5f7fb;">
+<body style="background-color:`r bg_fill`;">
 
 <style type="text/css">
 h1.title {
@@ -250,17 +259,13 @@ htmltools::img(src = knitr::image_uri("/home/coleen/Documents/GRAF_files/GRAF-RI
 <!-- PLOTS AND TABLES from HERE: -->
 
 <!-- <div style="float:right; position:relative; top:-150px;margin-bottom:-100px;margin-right:10px;"> -->
-```{r COUNTRY MAP plot, message=FALSE, warning=FALSE, fig.align='center',fig.width=15,fig.height=8}
-knitr::opts_chunk$set(dev.args=list(bg="transparent"))
-
+```{r COUNTRY MAP plot, fig.align='center',fig.width=15,fig.height=8}
 p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes = FALSE) +
-  xlab("Longitude") + ylab("Latitude") +
-  theme(panel.background = element_rect(fill='transparent'),
-         plot.background = element_rect(fill='transparent', color=NA),
-         panel.grid.major = element_blank(),
-         panel.grid.minor = element_blank(),
-         legend.background = element_rect(fill='transparent'),
-         legend.box.background = element_rect(fill='transparent'))
+  xlab("Longitude") + ylab("Latitude") 
+
+  
+
+  #        )
 ```
 <!-- </div> -->
 
