@@ -5,7 +5,7 @@ GetUNMaps<-function(ISO){
   # Extract boundaries file (1st admin level)
   # ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
   # ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
-  ADM<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
+  ADM<-as(sf::st_read("/home/coleen/Documents/Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
   projection(ADM)<-"+proj=longlat +datum=WGS84 +no_defs"
   ADM <- ADM[ADM@data$ISO3CD ==ISO, ]
   ADM@data%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
@@ -129,7 +129,11 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 #--------data manipulation + analysis on ADM shapefile-----------
 library(sf)
 library(dplyr)
- 
+
+#list of countries from shapefile:
+adm <-st_read("/home/coleen/Documents/Data/Spatial/ADM_Full.shp", quiet = TRUE) %>%
+  st_drop_geometry()
+
 #shapefile
 adm<- adm %>%
   st_drop_geometry() %>%

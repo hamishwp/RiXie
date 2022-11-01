@@ -1,96 +1,23 @@
 ```{r setting options and loading data, include=FALSE}
 knitr::opts_chunk$set(echo =FALSE, message=FALSE, warning=FALSE)
-source("./GeneralFunctions.R")
-# 
-# load("codes_desc.RData") #returns error, but seems to be working!
-# sys.source("./GetWorldBank.R", envir = knitr::knit_global())
-# sys.source("./GetINFORM.R", envir = knitr::knit_global())
-# sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
+# source("./GeneralFunctions.R")
+# source("./AdminBoundaries.R")
+
+load("./codes_desc.RData")
+sys.source("./GetWorldBank.R", envir = knitr::knit_global())
+sys.source("./GetINFORM.R", envir = knitr::knit_global())
+sys.source("./AdminBoundaries.R",envir = knitr::knit_global())
+sys.source("./GeneralFunctions.R",envir = knitr::knit_global())
 ```
 
 ```{r selecting country}
 #country select
-country_iso <-"AGO"
+country_iso <-"COM"
+
 country_full <- convIso3Country(country_iso)
 pres_title <- country_full
 pres_date <- Sys.Date()
 ```
----
-title: `r pres_title` RiX Spotlight
-subtitle: "For Humanitarian Needs Overview"
-output:
-  html_document:
-      css: styles.css
----
-
-<style type="text/css">
-h1.title {
-  font-size: 50px;
-  color:  #000000;
-  text-align: center;
-}
-h3.subtitle {
-  font-size: 30px;
-  color:  #000000;
-  text-align: center;
-}
-.table-hover > tbody > tr:hover { 
-  background-color: #f7f7e6;
-}
-.main-container {
- zoom:70%;
-  width: 80%;
-    max-width:80%;
-  }
-</style>
-
-```{r RiX logo}
-htmltools::img(src = knitr::image_uri("/home/coleen/Documents/GRAF_files/GRAF-RIX_Map-E _tall.svg"), 
-               alt = 'logo', 
-               style = 'position:absolute; top:0; left:8; padding:10px;')
-
-```
-
-
-```{r Map design, message=FALSE, warning=FALSE,include=FALSE}
-#,out.extra='style="float: left"'
-# library(geodata)
-# library(ggflags)
-# library(ggplot2)
-# library(ggthemes)
-# library(sf)
-# #Coutnry shapefile
-# country_gadm <-GetUNMaps(country_iso) %>% #gadm(country_iso,level=2, path= tempdir()) %>%
-#   st_as_sf
-# adm_plot <- ggplot(country_gadm, lwd= 0.15) +
-#   geom_sf(fill = "steelblue2") + theme_void()
-# adm_plot
-
-library(ggmap)
-
-bbox<-countriesbbox(country_iso)
-# we want longitude to be three times wider than latitude
-disty<-c(bbox[3]-bbox[1],bbox[4]-bbox[2])
-if(disty[1]<3*disty[2]){
-  bbox[1]<-bbox[1]+0.5*disty[1]-1.5*disty[2]
-  bbox[3]<-bbox[3]-0.5*disty[1]+1.5*disty[2]
-} else{
-  bbox[2]<-bbox[2]+0.5*disty[2]-disty[1]/6
-  bbox[4]<-bbox[4]-0.5*disty[2]+disty[1]/6
-}
-
-# Add some padding to the plot
-bbox%<>%expandBbox(1.5)
-
-mad_map <- get_stamenmap(bbox,source = "terrain-background", zoom=9)
-
-country_gadm<-GetUNMaps(country_iso)
-
-p<-ggmap(mad_map, maprange=FALSE) 
-
-
-```
-
 
 ```{r Basic Risk Data-Indices Tables}
 #-------WORLD BANK------
@@ -101,7 +28,7 @@ country_wbank <- lapply(WB_data_all, function(x) x[x$iso3 == country_iso,]) %>%
   do.call(rbind,.) %>%
   mutate(Indicator = row.names(.)) %>% 
   #plyr::join(., Rank_class_df, by="Rank_class") %>%
-  select("Indicator", "Value","Year", "Rank","Rank_out_of", "Rank_class") %>%
+  dplyr::select("Indicator", "Value","Year", "Rank","Rank_out_of", "Rank_class") %>%
   arrange(Indicator) %>%
   left_join(.,Wbank_codes_desc, by = c("Indicator" = "Variable.API.Name")) %>% #add description and source
   mutate(across(everything(), as.vector)) %>% #remove any attribute label
@@ -119,7 +46,7 @@ country_inform <- lapply(Country_with_ranks, function(x) x[x$iso == country_iso,
   t  %>%
   data.frame() %>%
   mutate(Index = rownames(.)) %>%
-  select(Index, Value, Rank, Rank_out_of, Rank_class) %>%
+  dplyr::select(Index, Value, Rank, Rank_out_of, Rank_class) %>%
   #plyr::join(., Rank_class_df, by="Rank_class") %>%
   filter(complete.cases(.)) %>%
   left_join(.,Inform_codes_desc, by = c("Index" = "INFORM.Id")) %>% #add description and source
@@ -155,7 +82,7 @@ target_grp <- c("Risk Index", "Hazard","Exposure", "Vulnerability","Others -to b
 Wbank_inform_combi <- plyr::rbind.fill(country_inform, country_wbank) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   #mutate(Rank = paste(Rank, Rank_out_of, sep = "/")) %>%
-  select(-Rank_class) %>%
+  dplyr::select(-Rank_class) %>%
   mutate(Description = " ") %>%
   mutate(Category = sapply(.$Index, indicator_group)) %>%
   arrange(factor(Category, levels = target_grp)) %>%
@@ -169,7 +96,7 @@ library(forcats)
 source("./Spotlight_plotting_functions.R")
 #------Combined WBANK+INFORM table plot---------
 #tile color
-#country_all$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(country_all$`Comparative Value`) #c("#9DBF9E", "#FCB97D", "#A84268")
+#Wbank_inform_combi$`Comparative Value` <- color_tile2(c("palegreen3",'lightgoldenrod1', "tomato2"))(Wbank_inform_combi$`Comparative Value`) #c("#9DBF9E", "#FCB97D", "#A84268")
 
 #Rows from inform need indentation (sublevels)
 inform_row_indent <- function(df, level){
@@ -177,22 +104,22 @@ inform_row_indent <- function(df, level){
   mutate(row=row_number()) %>% 
   filter(grepl("INFORM", Source)) %>% 
   filter(str_count(Index, '\\.') == level) %>%
-  select(row) %>%
+  dplyr::select(row) %>%
   unlist(.) %>%
   unname(.)
 }
 
-ind1 <- inform_row_indent(country_all,level=1)
-ind2 <-  inform_row_indent(country_all,level=2)
+ind1 <- inform_row_indent(Wbank_inform_combi,level=1)
+ind2 <-  inform_row_indent(Wbank_inform_combi,level=2)
 
-# country_all[c("Index_name","Description","Value","Year of Publication","Rank","Comparative Value","Source")] %>%
+# Wbank_inform_combi[c("Index_name","Description","Value","Year of Publication","Rank","Comparative Value","Source")] %>%
 #   tibble()%>%
 #   kbl(escape=F, align = 'lcccrcl') %>%
 #   kable_paper("striped", full_width = T, font_size = 13) %>%
 #   column_spec(c(1,2,7), width_min = c("6cm","6cm","5cm"), width_max = c("15cm","6cm","5cm")) %>%
-#   pack_rows(index = table(fct_inorder(country_all$Category))) %>%
+#   pack_rows(index = table(fct_inorder(Wbank_inform_combi$Category))) %>%
 #   column_spec(6, color = "white",
-#               background = spec_color(as.numeric(country_all$`Comparative Value`),alpha = 0.75, end = 0.4, option = "inferno")) %>%
+#               background = spec_color(as.numeric(Wbank_inform_combi$`Comparative Value`),alpha = 0.75, end = 0.4, option = "inferno")) %>%
 #   add_indent(ind1, level_of_indent = 0.5) %>%
 #   add_indent(ind2, level_of_indent = 1) 
 ```
@@ -224,12 +151,12 @@ adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>
   `colnames<-`(c("Mean_Value", "Rank", "Rank_out_of","Rank_class")) %>%
   #mutate(Rank = mapply(function(x,y) Ranking(x,y), Rank,Rank_out_of)) %>%
   mutate(Codes = rownames(.)) %>%
-  select(Codes, Mean_Value, Rank, Rank_out_of, Rank_class) %>%
+  dplyr::select(Codes, Mean_Value, Rank, Rank_out_of, Rank_class) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
   mutate(Mean_Value = round(Mean_Value,2) ) %>%
   #mutate(Rank_class  = ifelse(is.na(Rank_class)==TRUE,1,Rank_class)) %>% # to deal with NAs in Rank, for plotting later
   left_join(., adm_sources, by = c("Codes" = "GDLCODE")) %>% #add description and source
-  select(var_select) %>%
+  dplyr::select(var_select) %>%
   rename_at(vars(oldnames), ~ newnames) %>%
  # mutate(Source = paste0(Source," (",URL,")" )) %>%
   arrange(factor(Category, levels = target_adm)) %>%
@@ -252,21 +179,88 @@ adm_country[c(2,3,4,5,7,8)] %>%
 #   add_header_above(c("Country Statistics" = 2), font_size = "medium")
 ```
 
+
+```{r Map design, message=FALSE, warning=FALSE,include=FALSE}
+library(ggmap)
+
+bbox<-countriesbbox(country_iso)
+# we want longitude to be three times wider than latitude
+disty<-c(bbox[3]-bbox[1],bbox[4]-bbox[2])
+if(disty[1]<3*disty[2]){
+  bbox[1]<-bbox[1]+0.5*disty[1]-1.5*disty[2]
+  bbox[3]<-bbox[3]-0.5*disty[1]+1.5*disty[2]
+} else{
+  bbox[2]<-bbox[2]+0.5*disty[2]-disty[1]/6
+  bbox[4]<-bbox[4]-0.5*disty[2]+disty[1]/6
+}
+
+# Add some padding to the plot
+bbox%<>%expandBbox(1.5)
+
+mad_map <- get_stamenmap(bbox,source = "terrain-background", zoom=9)
+
+country_gadm<-GetUNMaps(country_iso)
+
+p<-ggmap(mad_map, maprange=FALSE) 
+
+
+```
+
+<!--#################HTML (or pdf?) page starts here#########################-->
+
+---
+title: `r pres_title` RiX Spotlight
+subtitle: "For Humanitarian Needs Overview"
+output:
+  html_document:
+      css: styles.css
+---
+
+<body style="background-color:#f5f7fb;">
+
+<style type="text/css">
+h1.title {
+  font-size: 50px;
+  color:  #000000;
+  text-align: center;
+}
+h3.subtitle {
+  font-size: 30px;
+  color:  #000000;
+  text-align: center;
+}
+.table-hover > tbody > tr:hover { 
+  background-color: #f7f7e6;
+}
+.main-container {
+ zoom:70%;
+  width: 80%;
+    max-width:80%;
+  }
+</style>
+
+```{r RiX logo}
+htmltools::img(src = knitr::image_uri("/home/coleen/Documents/GRAF_files/GRAF-RIX_Map-E _tall.svg"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; left:8; padding:10px;')
+
+```
+
+
 <!-- PLOTS AND TABLES from HERE: -->
 
 <!-- <div style="float:right; position:relative; top:-150px;margin-bottom:-100px;margin-right:10px;"> -->
 ```{r COUNTRY MAP plot, message=FALSE, warning=FALSE, fig.align='center',fig.width=15,fig.height=8}
+knitr::opts_chunk$set(dev.args=list(bg="transparent"))
+
 p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes = FALSE) +
   xlab("Longitude") + ylab("Latitude") +
-  theme(legend.position="none", #+ scale_fill_viridis(discrete = TRUE,option = "G");p
-        panel.background = element_rect(fill='transparent'),
-        plot.background = element_rect(fill='transparent', color=NA),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        legend.background = element_rect(fill='transparent'),
-        legend.box.background = element_rect(fill='transparent')
-  )
-
+  theme(panel.background = element_rect(fill='transparent'),
+         plot.background = element_rect(fill='transparent', color=NA),
+         panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank(),
+         legend.background = element_rect(fill='transparent'),
+         legend.box.background = element_rect(fill='transparent'))
 ```
 <!-- </div> -->
 
@@ -274,8 +268,8 @@ p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes =
 #---------------MERGE wbank_inform_combi and adm_country stats dfs---------
 all<-plyr::rbind.fill(Wbank_inform_combi,adm_country) %>%
   mutate(URL =paste0("[",URL, "](", URL, ")")) %>%
-  mutate(Description = as.character(paste0("The ", tolower(Index_name)," ",Unit," for ", country_full," is estimated to be ",
-                                           Value, ", which is considered as ", tolower(`Comparative Value`)," risk as compared to ",
+  mutate(Description = as.character(paste0("The ", tolower(Index_name)," for ", country_full," is estimated to be ",
+                                           Value," ",Unit,", which is considered as ", tolower(`Comparative Value`)," risk as compared to ",
                                            Rank_out_of," other countries. Additionally, ",country_full," ranks at ",Rank," out of ",Rank_out_of,
                                            " around the world. These estimates were taken from ",Source,", made in ",`Year of Publication`,". (", URL,")"))) %>%
   rename(Name = Index_name) %>%
@@ -288,7 +282,7 @@ all[c(5,10,11)] %>%
   kbl(escape=F, align = 'rcl') %>%
   #kable_paper(full_width = T, font_size = 14) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),full_width = T, font_size = 14) %>%
-  column_spec(1, bold = T, width = "5em", border_right = T, extra_css = "vertical-align:middle;") %>%
+  column_spec(1, width = "5em", border_right = T, extra_css = "vertical-align:middle;") %>%
   column_spec(2,width = "3em", color = "white", extra_css = "vertical-align:middle;",
               background = spec_color(as.numeric(all$`Comparative Value`),alpha = 0.5, end = 0.4, option = "inferno"))%>%
   column_spec(3, width = "60em")%>%
