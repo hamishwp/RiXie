@@ -2,7 +2,7 @@ library(rmarkdown)
 
 ##-------rmd2html spotlight-------
 
-load("./codes_desc.RData") 
+load("/home/coleen/Documents/GitHub/RiXie/Data/codes_desc.RData")
 source("./GeneralFunctions.R")
 source("./AdminBoundaries.R")
 
@@ -10,7 +10,7 @@ country<-adm_group$iso
 
 
 rmd2html<- function(iso){
-  filname<-paste0(iso,"_spotlight.html")
+  filname<-paste0(iso,"_RiX-Spotlight.html")
   country_iso <- iso
   render("./Spotlight.Rmd",
          output_format = "html_document",
