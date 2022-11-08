@@ -19,4 +19,6 @@ rmd2html<- function(iso){
   
 }
 
-lapply(country, rmd2html)
+lapply(country[1:28], rmd2html)
+
+
