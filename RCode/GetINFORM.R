@@ -36,7 +36,7 @@ GetINFORMdata<-function(indicator, dataset_name, iso=NULL, normalise=F){
   
   id <-Inform_wrkflo_info %>%
                    filter(Name == dataset_name) %>%
-                   select(WorkflowId) %>%
+                   dplyr::select(WorkflowId) %>%
                    as.integer()
   
   if(length(id) == 0){
@@ -87,7 +87,7 @@ IndiCodes<-function(codes_list, level=1){
   
 }  
 
-#function to combine values per indicator category into a df
+#combine values per indicator category into a df
 InformVals <- function(indicator,level, dataset_name){
   indicator.df <- IndiCodes(indicator, level=level) %>%
     lapply(., function(x) GetINFORMdata(x, dataset_name = dataset_name)) %>%
@@ -242,7 +242,7 @@ Inform_Risk<-InformVals(INFORM, level=1, dataset_name = dataset)
 
 
 #Risk components:
-Inform_all_df<-lapply(Inform_codes_list, InformVals,level=3, dataset_name = dataset) %>%
+Inform_all_df<-lapply(Inform_codes_list, InformVals,level=2, dataset_name = dataset) %>%
   lapply(., function(x) x[,c("iso3",sort(colnames(x[-1])))]) %>%
   Reduce(function(x,y) merge(x, y, by = "iso3", all.x = TRUE, all.y = TRUE) , .) 
 
