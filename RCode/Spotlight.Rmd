@@ -14,7 +14,7 @@ sys.source("./GeneralFunctions.R",envir = knitr::knit_global())
 
 ```{r selecting country}
 #country select
-#ountry_iso <-"SWZ"
+# country_iso <-"SWZ"
 
 country_full <- convIso3Country(country_iso)
 pres_title <- country_full
@@ -275,7 +275,7 @@ p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes =
 #-------------------------------------------------------
 all<-plyr::rbind.fill(Wbank_inform_combi,adm_country) %>%
   mutate(URL =paste0("[",URL, "](", URL, ")")) %>%
-  mutate(Unit = case_when(grepl("scale|count|RP|=|constant|aggregate", Unit) ==FALSE ~ gsub("[()]", "", Unit),
+  mutate(Unit = case_when(grepl("scale|count|RP|=|constant|aggregate|-2011", Unit) ==FALSE ~ gsub("[()]", "", Unit),
             TRUE ~ Unit)) %>%
   mutate(Description = as.character(paste0("The ", tolower(Index_name)," for ", country_full," is estimated to be ",
                                            Value," ",Unit,", which is considered ", tolower(`Comparative Value`)," value as compared to ",

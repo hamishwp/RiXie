@@ -18,4 +18,4 @@ adm_labels <-read.csv("/home/coleen/Documents/Data/Spatial/Field_Names.csv",head
 adm_sources <-read.csv("/home/coleen/Documents/Data/Spatial/MappingDataSources.csv",header=T)
 
 
-save.image(file="codes_desc.RData")
+save.image(file ="/home/coleen/Documents/GitHub/RiXie/Data/codes_desc.RData")
