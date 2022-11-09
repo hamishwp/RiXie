@@ -139,10 +139,16 @@ adm<- adm %>%
   st_drop_geometry() %>%
   mutate_all(function(x) ifelse(is.nan(x), NA, x))
 
-#get country stats, row statistics
-adm_group <- aggregate(x = adm[,which(sapply(adm, class) == "numeric")], by = list(adm$ISO3CD), FUN = mean, na.rm=TRUE) %>%
+#get country stats, row statistics, total for pop, mean for others
+pop <- c("POPULAT", "FemalPp","Undr14P","Ovr64Pp")
+adm_group <- adm %>%
+  group_by(ISO3CD) %>%
+  dplyr::select(where(is.numeric)) %>%
+  summarise(across(pop, sum), across(-pop, mean)) %>%
+  dplyr::select(where(~!all(is.na(.)))) %>%
   mutate_all(function(x) ifelse(is.nan(x), NA, x)) %>%
   rename_at(1,~"iso") 
+
 
 #Rank based on the current number of countries in the shapefile.......
 Adm_cRank <- function(data){

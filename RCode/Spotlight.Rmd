@@ -14,7 +14,7 @@ sys.source("./GeneralFunctions.R",envir = knitr::knit_global())
 
 ```{r selecting country}
 #country select
-#ountry_iso <-"SWZ"
+#country_iso <-"SWZ"
 
 country_full <- convIso3Country(country_iso)
 pres_title <- country_full
@@ -139,17 +139,21 @@ Ranking <- function(Rank, Rank_out_of){
       NA
     }
 }
+#
 
 #Subset table
 var_select <-c("Codes","Category", "Description", "Mean_Value","Unit","Year_of_Publication", "Rank", "Rank_out_of","Class_levels", "Organisation", "URL")
 #Grouping names
 target_adm <- c("Hazard", "Exposure", "Vulnerability", "Climate Change")
 
+#population codes for number formatiing:
+pop <- c("POPULAT", "FemalPp","Undr14P","Ovr64Pp")
+
 ## changing headers for table:
 oldnames <- c("Class_levels", "Year_of_Publication", "Mean_Value", "Organisation", "Codes", "Description")
 newnames <- c("Comparative Value", "Year of Publication", "Value", "Source", "Index", "Index_name") ##it's the mean value per country but labeling as `Value` to be same as basic risk data table column names 
 
-adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>%
+adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])[,1]) %>%
   lapply(., data.frame, check.names=FALSE) %>%
   do.call(cbind, .) %>%
   `colnames<-`(c("Mean_Value", "Rank", "Rank_out_of","Rank_class")) %>%
@@ -157,7 +161,7 @@ adm_country <- lapply(adm_ranks, function(x) t(x[x$iso == country_iso,][-1])) %>
   mutate(Codes = rownames(.)) %>%
   dplyr::select(Codes, Mean_Value, Rank, Rank_out_of, Rank_class) %>%
   plyr::join(., Rank_class_df, by="Rank_class") %>%
-  mutate(Mean_Value = round(Mean_Value,2) ) %>%
+  mutate(Mean_Value = ifelse(Codes %in% pop, sub("\\.\\d+$", "",Mean_Value), round(Mean_Value,2))) %>%
   #mutate(Rank_class  = ifelse(is.na(Rank_class)==TRUE,1,Rank_class)) %>% # to deal with NAs in Rank, for plotting later
   left_join(., adm_sources, by = c("Codes" = "GDLCODE")) %>% #add description and source
   dplyr::select(var_select) %>%
@@ -275,10 +279,10 @@ p + geom_sf(data=st_as_sf(country_gadm),fill="#9ABBD6", alpha=0.5, inherit.aes =
 #-------------------------------------------------------
 all<-plyr::rbind.fill(Wbank_inform_combi,adm_country) %>%
   mutate(URL =paste0("[",URL, "](", URL, ")")) %>%
-  mutate(Unit = case_when(grepl("scale|count|RP|=|constant|aggregate", Unit) ==FALSE ~ gsub("[()]", "", Unit),
+  mutate(Unit = case_when(grepl("scale|count|RP|=|constant|aggregate|-2011", Unit) ==FALSE ~ gsub("[()]", "", Unit),
             TRUE ~ Unit)) %>%
   mutate(Description = as.character(paste0("The ", tolower(Index_name)," for ", country_full," is estimated to be ",
-                                           Value," ",Unit,", which is considered ", tolower(`Comparative Value`)," value as compared to ",
+                                           format(Value,big.mark=",")," ",Unit,", which is considered ", tolower(`Comparative Value`)," value as compared to ",
                                            Rank_out_of," other countries. Additionally, ",country_full," ranks at ",Rank," out of ",Rank_out_of,
                                            " around the world. These estimates were taken from ",Source,", made in ",`Year of Publication`,". (", URL,")"))) %>%
   rename(Name = Index_name) %>%
