@@ -14,7 +14,7 @@ sys.source("./GeneralFunctions.R",envir = knitr::knit_global())
 
 ```{r selecting country}
 #country select
-#country_iso <-"SWZ"
+#country_iso <-"KGZ"
 
 country_full <- convIso3Country(country_iso)
 pres_title <- country_full
@@ -301,6 +301,8 @@ all[c(5,10,11)] %>%
   column_spec(3, width = "60em")%>%
   pack_rows(index = table(fct_inorder(all$Category)), hline_before = T, bold=T) 
 
+#write
+write.csv(all,file = paste0("/home/coleen/Documents/GRAF_files/Results/Spotlight/",country_iso,"_RiX-Spotlight.csv"),row.names = FALSE)
 ```
 
 
