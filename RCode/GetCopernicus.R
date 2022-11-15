@@ -9,9 +9,9 @@ lapply(packages , require, character.only = TRUE)
 
 
 
-#----------------------------------
+#--------------------API--------------
 #CDS API access/download
-#-------------------------------
+
 
 cds_api_dl <- function(cds_user,cds_key, target_path,req_list){
   service <- "cds"
@@ -23,13 +23,19 @@ cds_api_dl <- function(cds_user,cds_key, target_path,req_list){
   }
   }
 
+#user API download params:
+target_path <- "/media/coleen/DDrive/A_UNDRR_GRAF/Results/CDS"
+user <- "161815" #coleen personal user ID #@RiX_climate! pass
+key <- "b631611e-7dc1-4453-a598-f7aaac7a095b"
 
-#----------------------DATASET---------------------------------------
+
+#----------------------DATASET 01---------------------------------------
 #Global sea level change indicators from 1950 to 2050 derived
 #from reanalysis and high resolution CMIP6 climate projections
 
 #'sis-water-level-change-indicators-cmip6'
-#------------------------------------------------------------------
+
+
 #API REQUEST parameters:
 
 #function:
@@ -61,10 +67,6 @@ cds_wat_lev_indic<-function(variable, years, cds_user, cds_key, target_path, fil
   cds_api_dl(cds_user,cds_key, target_path,req_list)
 }
 
-#user API download params:
-target_path <- "/home/coleen/Documents/GRAF_files/Results/CDS"
-user <- "161815" #coleen personal user ID #@RiX_climate! pass
-key <- "b631611e-7dc1-4453-a598-f7aaac7a095b"
 
 
 #data params:
@@ -76,13 +78,14 @@ desc<-"water_level_change"
 cds_wat_lev_indic(varia, years, user, key, target_path, desc)
 
 
-#----------------------------DATASET---------------------
+#----------------------------DATASET 02---------------------
 #Climate extreme indices and heat stress indicators
 #derived from CMIP6 global climate projections
 #Could be: ETCCDI or HSI
 #https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-extreme-indices-cmip6?tab=form
 #'sis-extreme-indices-cmip6'
-#---------------------------------------------------------
+
+
 #function
 cds_extre_indic<-function(var_cat, var, period, cds_user, cds_key, target_path, fil_desc){
   if(var_cat == "ETCCDI"){
@@ -121,13 +124,6 @@ cds_extre_indic<-function(var_cat, var, period, cds_user, cds_key, target_path, 
 cds_api_dl(cds_user,cds_key, target_path, req_list)
 }
 
-
-#user API download params:
-target_path <- "/home/coleen/Documents/GRAF_files/Results/CDS"
-user <- "161815" #coleen personal user ID #@RiX_climate! pass
-key <- "b631611e-7dc1-4453-a598-f7aaac7a095b"
-
-
 #data params:
 var <-c("maximum_5_day_precipitation","maximum_1_day_precipitation")
 fil_desc<-"extr_indices"
@@ -137,6 +133,51 @@ period = c('19510101-20101231', '20110101-21001231') #HSI
 
 #RUN function:
 cds_extre_indic(var_cat,var,period, user, key, target_path, fil_desc)
+
+
+
+
+##-------------------------DATASET 03-------------------------------------------------------
+#Essential climate variables for assessment of climate variability from 1979 to present
+
+#'ecv-for-climate-change'
+
+#function
+cds_ecv<-function(vars,years, cds_user, cds_key, target_path, fil_desc){
   
+  req_list <- list()
   
+  for(i in years){ #loop based on time
+  
+    req_list[[i]] <- list(
+    version = "2_0",
+    format = "zip",
+    variable = vars,
+    product_type = 'anomaly', #'climatology', 'monthly_mean'),
+    time_aggregation = '1_month_mean',
+    origin ='era5',
+    month = sprintf("%02d",seq(1:12)),
+    year = as.character(i),
+    climate_reference_period = '1981_2010',# '1991_2020'),
+    target = paste0("CDS_",fil_desc,"_",i,".zip"),
+    dataset_short_name = 'ecv-for-climate-change'
+    )
+  }
+  req_list<-Filter(Negate(is.null), req_list)
+  
+  #downloading each req:
+  cds_api_dl(cds_user,cds_key, target_path, req_list)
+  
+}
+
+#data params:
+var <-c('0_7cm_volumetric_soil_moisture', 'precipitation', 'sea_ice_cover',
+        'surface_air_relative_humidity', 'surface_air_temperature')
+fil_desc<-"ecv"
+years<- sprintf("%04d",seq(2000,2020,1)) #change as downloading data sometimes stops due to timeout.
+
+
+#RUN function:
+cds_ecv(var,years, user, key, target_path, fil_desc)
+
   
