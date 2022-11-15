@@ -125,13 +125,14 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 #   ADM2%<>%merge(SHDI,by="AltName")
 #   
 # }
-
-#--------data manipulation + analysis on ADM shapefile-----------
+#---------------------------------------------------------------------
+#data manipulation + analysis on ADM shapefile
+#------------------------------------------------------------
 library(sf)
 library(dplyr)
 
 #list of countries from shapefile:
-adm <-st_read("/home/coleen/Documents/Data/Spatial/ADM_Full.shp", quiet = TRUE) %>%
+adm <-st_read("/media/coleen/DDrive/A_UNDRR_GRAF/Data/Spatial/ADM_Full.shp", quiet = TRUE) %>%
   st_drop_geometry()
 
 #shapefile

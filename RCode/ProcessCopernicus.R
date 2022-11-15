@@ -5,9 +5,9 @@ library(magrittr)
 library(dplyr)
 library(sf)
 
-#--------------------------------
+#---------------------------------------------
 #Read climate data netcdf - water levels
-#-------------------------------
+#-----------------------------------------
 #fucntion
 ncdf2pts_watlev<-function(netcdf_file,crs){
   a<-nc_open(netcdf_file)
@@ -28,10 +28,10 @@ ncdf2pts_watlev<-function(netcdf_file,crs){
 
 
 #--------------------------------------------------------------
-#read EEZ shapefile for countries to get coastal bounds
+#read EEZ shapefile for coutnry coastal bounds
 #from:https://www.marineregions.org/eez.php
 #-------------------------------------------------------------
-eez <-"/home/coleen/Documents/GRAF_files/World_EEZ_v11_20191118/eez_v11.shp" %>%
+eez <-"/media/coleen/DDrive/A_UNDRR_GRAF/World_EEZ_v11_20191118/eez_v11.shp" %>%
   st_read()
 
 #function #extract country bounds +  buffer:
@@ -67,24 +67,38 @@ wat_lev_stats <- function(wat_level,projcrs,eez){
 
 
 ####################################################################################
-#read some scripts
+#Read info on country shapefile
 source("./AdminBoundaries.R")
 #Country list
 country<-adm_group$iso
 
-#---------------------------------------
+#------------------------------------------------------
 #Extract values for annual waterlevels:
-#-------------------------------------
+#------------------------------------------------------
 var<- "MSL"
-climfil <- list.files("/home/coleen/Documents/GRAF_files/Results/CDS",pattern = paste0("*",var), full.names = TRUE, recursive = TRUE)
-yrs <-as.numeric(gsub(".*?([0-9]+).*", "\\1", climfil))   
+local <-"/media/coleen/DDrive/A_UNDRR_GRAF/Results/CDS/CDS_water_level_change/"
+
+climfil <- list.files(local, pattern = paste0("*",var), full.names = TRUE, recursive = TRUE)
+yrs <-as.numeric(stringr::str_extract(climfil,"[[:digit:]]+"))  #gsub(".*?([0-9]+).*", "\\1", climfil))   
 
 projcrs <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
 eez <-country_eez(country[[1]],5000)
 
 #extract values:
 wat_lev_years<-lapply(climfil, wat_lev_stats, projcrs, eez) %>%
   do.call("rbind",.) %>%
-  mutate(Year = yrs)
+  mutate(Year = lubridate::ymd(yrs, truncated = 2L))
+
+
+##----------------------------------------------------------------
+# time series plots
+#----------------------------------------------------------------
+library(reshape2)
+library(ggplot2)
+
+df <- melt(wat_lev_years,  id.vars = 'Year', variable.name = 'Series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df, aes(Year,value)) + geom_line(aes(colour = Series))
 
