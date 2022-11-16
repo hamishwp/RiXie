@@ -180,4 +180,55 @@ years<- sprintf("%04d",seq(2000,2020,1)) #change as downloading data sometimes s
 #RUN function:
 cds_ecv(var,years, user, key, target_path, fil_desc)
 
+
+##-------------------------DATASET 04-------------------------------------------------------
+#CMIP6 climate projections - selected variables, montlhy
+
+# 'projections-cmip6'
+
+   
+#function
+cds_cmip6<-function(vars, years,exp, cds_user, cds_key, target_path, fil_desc){
+  #subset years based on experiment:
+  if(exp == "historical"){
+    years <-years[years <= 2015]
+  } else{
+    years <- years[years >= 2015]
+  }
   
+  req_list <- list()
+  for(i in years){ #loop based on time
+    req_list[[i]] <- list(
+      format = "zip",
+      variable = vars,
+      temporal_resolution = 'monthly',
+      experiment = exp,
+      model = j,
+      month = sprintf("%02d",seq(1:12)),
+      year = as.character(i),
+      target = paste0("CDS_",fil_desc,"_",j,"_",exp,"_",i,".zip"),
+      dataset_short_name = 'projections-cmip6'
+    )
+  }
+}
+  #clean
+  req_list<-Filter(Negate(is.null), req_list)
+  
+  #downloading each req:
+  #cds_api_dl(cds_user,cds_key, target_path, req_list)
+}
+
+
+
+#data params:
+clim_mod<-read.csv("/media/coleen/DDrive/A_UNDRR_GRAF/clim_models.csv",header=FALSE)
+var <-'near_surface_air_temperature'
+years<- sprintf("%04d",seq(1950,2100,1))
+fil_desc <-"cmip6"
+
+#lapply over experiment
+exp<- c("historical",'ssp1_2_6', 'ssp2_4_5', 'ssp3_7_0', 'ssp5_8_5')
+
+
+#RUN function:
+a<-lapply(exp, function(x) cds_cmip6(var,years, x, user, key, target_path, fil_desc))
