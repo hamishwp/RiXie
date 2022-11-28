@@ -1,23 +1,26 @@
 #################################################################
 #@@@@@@@@@@@@@@@@@ ADMIN BOUNDARY AGGREGATION @@@@@@@@@@@@@@@@@@#
 #################################################################
+library(sf)
+
 GetUNMaps<-function(ISO){
   # Extract boundaries file (1st admin level)
   # ADM1<-as(sf::st_read("./Data/AdminBoundaries/UNmap0_shp/BNDA_A1.shp"),"Spatial")
   # ADM1 <- ADM1[ADM1@data$ISO3CD ==ISO, ]
-  ADM<-as(sf::st_read("/home/coleen/Documents/Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp"),"Spatial")
-  projection(ADM)<-"+proj=longlat +datum=WGS84 +no_defs"
-  ADM <- ADM[ADM@data$ISO3CD ==ISO, ]
-  ADM@data%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
+  ADM<-sf::st_read("/home/coleen/Documents/GitHub/RiXie/Data/AdminBoundaries/UNmap0_shp/BNDA_A2.shp")
+  # projection(ADM)<-"+proj=longlat +datum=WGS84 +no_defs"
+  ADM <- ADM[ADM$ISO3CD ==ISO, ]
+  ADM%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
   # Calculate the area (in kilometres squared) of each admin boundary region
   # ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
-  centroids<-rgeos::gCentroid(ADM,byid=TRUE)
+  
+  centroids<-rgeos::gCentroid(as(ADM,"Spatial"),byid=TRUE)
   ADM$LONGITUDE<-centroids@coords[,1]
   ADM$LATITUDE<-centroids@coords[,2]
   # In case the admin level 2 boundaries do not exist, but level 1 do!
   if(all(is.na(c(ADM$ADM2NM,ADM$ADM2CD))) & !all(is.na(c(ADM$ADM1NM,ADM$ADM1CD)))) {
-    ADM@data$ADM2NM<-ADM@data$ADM1NM
-    ADM@data$ADM2CD<-ADM@data$ADM1CD
+    ADM$ADM2NM<-ADM$ADM1NM
+    ADM$ADM2CD<-ADM$ADM1CD
   }
   
   ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 

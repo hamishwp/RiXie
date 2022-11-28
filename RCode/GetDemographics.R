@@ -136,10 +136,16 @@ GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
   return(ADM)
 }
 
+
+
+
+
+
+
 GetDemog<-function(Dasher,ISO){
   # Get World Bank data
   # Gender stats
-  Gend<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.TOTL.FE.ZS",ISO=ISO)
+  Gend<-WBcall(AsYear(Sys.Date())-1 ,indicator="`SP.POP.TOTL.FE.ZS`",ISO=ISO)
   Dasher$FemalePop<-round(Dasher$POPULATION*Gend$value[1]/100)
   # Under14 stats
   Und14<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.0014.TO.ZS",ISO=ISO)
