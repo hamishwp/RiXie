@@ -28,7 +28,7 @@ ncdf2pts_watlev<-function(netcdf_file,crs){
 
 
 #--------------------------------------------------------------
-#read EEZ shapefile for coutnry coastal bounds
+#read EEZ shapefile for country coastal bounds
 #from:https://www.marineregions.org/eez.php
 #-------------------------------------------------------------
 eez <-"/media/coleen/DDrive/A_UNDRR_GRAF/World_EEZ_v11_20191118/eez_v11.shp" %>%
