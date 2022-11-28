@@ -1,8 +1,10 @@
-#################################################################
-######################## DEMOGRAPHIC DATA #######################
-#################################################################
+#--------------------------------------------------------------
+#----------------------DEMOGRAPHIC DATA------------------------
+#--------------------------------------------------------------
+
 WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T,BGSM=T){
-  ############### CONSTRAINED DATASETS ###############
+  
+  #------------------CONSTRAINED DATASETS-------------------------------
   if(constrained & kmres & unadj & BGSM){
     base_url<-"https://data.worldpop.org/GIS/Population/Global_2000_2020_Constrained/"
     url<-paste0(base_url,year,"/BSGM/",str_to_upper(iso3c),
@@ -31,7 +33,7 @@ WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T,BGSM=T){
     url<-paste0(base_url,str_to_upper(iso3c),
                 "/",str_to_lower(iso3c),"_ppp_",year,"_constrained.tif")  
     
-  ############### UNCONSTRAINED DATASETS ###############
+  #---------------------UNCONSTRAINED DATASETS-----------------------------
   } else if(!constrained & !kmres & unadj){    
     # UN-adjusted, 100m resolution and using the unconstrained method
     base_url<-"https://data.worldpop.org/GIS/Population/Global_2000_2020/"
@@ -55,6 +57,7 @@ WorldPopURL<-function(iso3c,year,constrained=T,kmres=T,unadj=T,BGSM=T){
   }
   return(url)
 }
+
 # Extract the required URL link to WorldPop and build the file names
 CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
   # Main host URL
@@ -75,7 +78,8 @@ CheckWPop_API<-function(iso3c,year,folder="./",constrained=T,kmres=T,unadj=T){
   
   return(list(filer=filer,locy=locy))
 }
-#@@@@@@@@@@@@@@@@@@@@@@@@@ WORLDPOP POPULATION @@@@@@@@@@@@@@@@@@@@@@@@@@#
+
+#---------------------------------WORLDPOP POPULATION-----------------------------------------#
 GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T){
   # Try to download the most recent dataset
   if(is.null(year)) {year<-AsYear(Sys.Date()); mostrecent<-T} else mostrecent<-F
@@ -100,11 +104,11 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",con
   popy%>%as("SpatialPixelsDataFrame")
 }
 
-#################################################################
-#@@@@@@@@@@@@@@@@@@@@@@@@@ EXTRACTION @@@@@@@@@@@@@@@@@@@@@@@@@@#
-#################################################################
+#------------------------------------------------
+#---------------EXTRACTION-----------------------
+#------------------------------------------------
 
-####################### GRIDDED WORLDPOP #######################
+#----------------------GRIDDED WORLDPOP----------------------------
 # Extract population data and put the conflict data onto the grid
 GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
   # Get the WorldPop data
