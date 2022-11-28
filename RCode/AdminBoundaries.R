@@ -15,7 +15,7 @@ GetUNMaps<-function(ISO){
   ADM$LONGITUDE<-centroids@coords[,1]
   ADM$LATITUDE<-centroids@coords[,2]
   # In case the admin level 2 boundaries do not exist, but level 1 do!
-  if(all(is.na(ADM@data[,c("ADM2NM","ADM2CD")])) & !all(is.na(ADM@data[,c("ADM1NM","ADM1CD")]))) {
+  if(all(is.na(c(ADM$ADM2NM,ADM$ADM2CD))) & !all(is.na(c(ADM$ADM1NM,ADM$ADM1CD)))) {
     ADM@data$ADM2NM<-ADM@data$ADM1NM
     ADM@data$ADM2CD<-ADM@data$ADM1CD
   }
@@ -132,7 +132,7 @@ library(sf)
 library(dplyr)
 
 #list of countries from shapefile:
-adm <-st_read("/media/coleen/DDrive/A_UNDRR_GRAF/Data/Spatial/ADM_Full.shp", quiet = TRUE) %>%
+adm <-st_read("./Data/Spatial/ADM_Full.shp", quiet = TRUE) %>%
   st_drop_geometry()
 
 #shapefile
