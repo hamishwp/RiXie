@@ -601,3 +601,96 @@ InterpOn<-function(FromDF,ToDF,namer="tmp",ext=NULL){
   return(ToDF)
 }
 
+
+#Comparing admin boundary shapefiles (UN vs another):
+ADMcompare2UN<-function(UNADM,ADM_other){#input should be at the desired admin level
+  #make both sf objects
+  ADM1<- st_as_sf(UNADM)
+  ADM2<- st_as_sf(ADM_other)
+  
+  #Check projection and make the same:
+  crs1<-st_crs(ADM1)
+  crs2<-st_crs(ADM2)
+  
+  if(!is.na(crs1) && crs1!=crs2){ #make crs2 same as crs1
+    st_crs(ADM2)<-crs1
+  }else if(is.na(crs1) && crs1!=crs2){
+    st_crs(ADM1)<-crs2 #make crs1 same as crs2
+  }
+  
+  #treat it polygon per polygon of UN maps
+  if(nrow(ADM1)>1){
+    ADM1_per_poly<-split(ADM1, f = ADM1[["ADM2CD"]])#prefer to split using codes because name can duplicate
+  }else{
+    ADM1_per_poly<-list(ADM1)
+  }
+  
+  #compare overlaps polygons:
+  str_UN <-deparse(substitute(UNADM))
+  str_ADM <-deparse(substitute(ADM_other))
+  
+  if(nrow(UNADM) >= nrow(ADM2)){ #which means that ADM1 maps smaller than ADM2
+    sms <- sprintf("%s polygons are smaller than %s",str_UN,str_ADM)
+    
+  }else if(nrow(UNADM) == nrow(ADM2)){
+    sms <- sprintf("%s polygons are similar to %s",str_UN,str_ADM)
+  }else{
+    sms <- sprintf("%s polygons are larger than %s",str_UN,str_ADM)
+  }
+  return(sms)
+}
+
+
+#returns listlevel2
+UNADM_max_overlap<-function(UNADM,ADM2){#input should be at the desired admin level
+  #make both sf objects
+  ADM1<- st_as_sf(UNADM)
+  ADM2<- st_as_sf(ADM2)
+  
+  #Check projection and make the same:
+  crs1<-st_crs(ADM1)
+  crs2<-st_crs(ADM2)
+  
+  if(!is.na(crs1) && crs1!=crs2){ #make crs2 same as crs1
+    st_crs(ADM2)<-crs1
+  }else if(is.na(crs1) && crs1!=crs2){
+    st_crs(ADM1)<-crs2 #make crs1 same as crs2
+  }
+  
+  #treat it polygon per polygon:
+  if(nrow(ADM1)>1){
+    per_poly<-split(ADM1, f = ADM1[["ADM2CD"]])#prefer to split using codes because name can duplicate
+  }else{
+    per_poly<-list(ADM1)
+  }
+  
+  ovlp<-list()
+  #consider different cases of overlap between UNADM and ADM2 polygons
+  if(nrow(ADM1) >= nrow(ADM2)){ #which means that ADM maps smaller than SHDI
+    
+    for(i in seq_along(per_poly)){
+      tryCatch({
+        p<-per_poly[[i]]
+        pt_surf<-st_point_on_surface(p)#not necessarily centroid.
+        #extract/subset
+        ovlp[[i]]<-ADM2[pt_surf,]
+      },
+      error = function(e) {}
+      )    
+    }
+  }else { #which means that ADM maps larger than SHDI
+    for(i in seq_along(per_poly)){
+      tryCatch(
+        {
+          p<-per_poly[[i]]
+          #extract/subset that intersects
+          ovlp[[i]]<-ADM2[st_intersects(ADM2,p,sparse=FALSE),]
+        },
+        error = function(e) {}
+        
+      )
+    }
+  }
+  return(ovlp)
+}
+

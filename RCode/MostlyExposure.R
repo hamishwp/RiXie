@@ -32,7 +32,7 @@ GetInfra_surface<-function(iso){
     st_transform(crs = "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") #proj4string mollweide
   
   #plot(ADM_mweide["ADM2NM"])
-  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2NM"]])
+  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2CD"]])
   #---------------GHS_BUILT_S--------------------------------------------
   #BuiltUp areas per ISO at level 2 admin boundaries
   #https://ghsl.jrc.ec.europa.eu/download.php?ds=bu
@@ -56,10 +56,15 @@ GetInfra_surface<-function(iso){
     # 
     BuiltUp_S_l2[[i]]<- sum(values(b),na.rm = TRUE)#already in 100 x 100 m or 1 ha.
   }
+  
+ ADM_mweide%<>%mutate(BuiltUp_Area_Ha = unlist(BuiltUp_S_l2))%>%
+   st_drop_geometry()
+ return(ADM_mweide)
 }
 
 
 GetInfra_class_area<-function(iso){
+  library(terra)
   source("./RCode/AdminBoundaries.R")
     #Read ADM, transform crs to match Builtup area crs
   ADM_mweide<-GetUNMaps(iso) %>%
@@ -69,7 +74,7 @@ GetInfra_class_area<-function(iso){
   
   #plot(ADM_mweide["ADM2NM"])
   
-  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2NM"]])
+  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2CD"]])
   #---------GHS_BUILT_C_MSZ-------------------------
   #GHS Settlement Characteristics
   #https://ghsl.jrc.ec.europa.eu/ghs_buC2022.php
@@ -97,9 +102,8 @@ GetInfra_class_area<-function(iso){
       mutate(built_area_hctre = count*(10*10)*0.0001)%>% #in hectares
       dplyr::select(c(value,built_area_hctre)) %>%
       rename("built_class_codes" = "value")
-    
   }
-  #read builtup classes description:
+ return(builtUp_l2_class)
 }
 
 #--------------------3.Financial/Economic Assets------------------
@@ -206,7 +210,12 @@ GetLandCover<-function(ADM,ISO,ext){
   
 }
 
+
+
+
+
 GetLCover_class_area<-function(iso){
+  library(ncdf4)
   #landcover raster:
   file<-list.files(path= "./Data/Exposure/", pattern = "*LCCS",recursive = TRUE,full.names = TRUE)
   lcover<-raster(file,varname="lccs_class")
@@ -216,6 +225,8 @@ GetLCover_class_area<-function(iso){
   adm_l2<-GetUNMaps(iso)
   adm_l2_list<-split(adm_l2, f=adm_l2[["ADM2NM"]])
   lc_adm_l2 <-lapply(adm_l2_list, terra::crop,x=lcover,mask=TRUE)
+  #lc_codes
+  lc_codes<-read.csv("./Data/Exposure/LandCover/CCI_LC_classes.csv", header=TRUE, stringsAsFactors = FALSE)
   
   #----------------------------------------------------------------------------------------         
   #Land cover area (in hectares) per class(grouping too, e.g. group all trees class?)
@@ -232,11 +243,20 @@ GetLCover_class_area<-function(iso){
       as.data.frame() %>%
       mutate(lc_area_hctre = count*(300*300)*0.0001)%>% #in hectares
       dplyr::select(c(value,lc_area_hctre)) %>%
-      rename("lc_codes" = "value")
+      rename("lc_codes" = "value")%>%
+      left_join(.,lc_codes, by = c("lc_codes" = "Value")) %>%
+      dplyr::select(-lc_codes)%>%
+      pivot_wider(names_from = LandCover_Description,values_from = lc_area_hctre) 
+      
   }
   lc_adm_classes<-lapply(lc_adm_l2, lc_frac)
-  }
+    
+  
+  
+}
 
+
+a<-GetLCover_class_area("PHL")
 
 
 

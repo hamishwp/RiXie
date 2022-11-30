@@ -2,6 +2,9 @@
 #@@@@@@@@@@@@@@@@@ ADMIN BOUNDARY AGGREGATION @@@@@@@@@@@@@@@@@@#
 #################################################################
 library(sf)
+library(dplyr)
+library(magrittr)
+
 
 GetUNMaps<-function(ISO){
   # Extract boundaries file (1st admin level)
@@ -23,8 +26,8 @@ GetUNMaps<-function(ISO){
     ADM$ADM2CD<-ADM$ADM1CD
   }
   
-  ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 
-           !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
+  # ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 
+  #          !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
   
   return(ADM)
 }
