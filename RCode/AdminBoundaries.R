@@ -26,8 +26,8 @@ GetUNMaps<-function(ISO){
     ADM$ADM2CD<-ADM$ADM1CD
   }
   
-  # ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) & 
-  #          !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
+  ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) &
+           !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
   
   return(ADM)
 }

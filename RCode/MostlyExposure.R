@@ -8,7 +8,7 @@
 #   4) Environmental & Cultural Assets
 # 
 #------------------1.Population & Demography------------------------#
-source(paste0(dir,"/RCode/GetDemographics.R"))
+source("./RCode/GetDemographics.R")
 
 #------------------2.Physical Infrastructural Assets------------------# 
 # GHS Built-Up Area
@@ -23,88 +23,78 @@ GetInfra<-function(ADM,ISO,ext){
   
 }
 
-GetInfra_surface<-function(iso){
-  source("./RCode/AdminBoundaries.R")
-  #Read ADM, transform crs to match Builtup area crs
-  ADM_mweide<-GetUNMaps(iso) %>%
-    dplyr::filter(ISO3CD==iso) %>%
-    dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD) %>%
-    st_transform(crs = "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") #proj4string mollweide
-  
-  #plot(ADM_mweide["ADM2NM"])
-  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2CD"]])
+
+GetInfra_surface<-function(admin_poly){ #iso3c code per country, and a polygon at desired admin boundary level
   #---------------GHS_BUILT_S--------------------------------------------
-  #BuiltUp areas per ISO at level 2 admin boundaries
   #https://ghsl.jrc.ec.europa.eu/download.php?ds=bu
   #data gives the amount of square meters of built-up surface in the cell
   #100m resolution
   #----------------------------------------------------------------------
   #read BuiltUp_S raster:
-  builtup_surf<-list.files(path="./Data/Exposure",pattern = "GHS_BUILT_S_.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
-    raster()
-  crs(builtup_surf)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
+  r<-list.files(path="./Data/Exposure",pattern = "GHS_BUILT_S_E2020.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
+    terra::rast()
+  #crs(r)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
   #extract values at L2; loop for each L2 polygon + test/check plot(?)
-  BuiltUp_S_l2<-list()
-  for(i in seq_along(adm_weide_l2)){
-    b<-builtup_surf %>%
-      crop(. ,st_bbox(adm_weide_l2[[i]])) %>%
-      terra::mask(.,adm_weide_l2[[i]])
-    b[b==0]<-NA  
-    #
-    # plot(b,col = topo.colors(20))
-    # plot(st_geometry(adm_l2[[i]]),add=TRUE)
-    # 
-    BuiltUp_S_l2[[i]]<- sum(values(b),na.rm = TRUE)#already in 100 x 100 m or 1 ha.
-  }
   
- ADM_mweide%<>%mutate(BuiltUp_Area_Ha = unlist(BuiltUp_S_l2))%>%
-   st_drop_geometry()
- return(ADM_mweide)
+  #Check projection and make the same:
+  crs1<-st_crs(r)
+  crs2<-st_crs(admin_poly)
+  
+  if(!is.na(crs1) && crs1!=crs2){ #make crs2 same as crs1
+    admin_poly<-st_transform(admin_poly, crs=st_crs(r))
+  }
+  b<-terra::crop(r,admin_poly)%>%
+    terra::mask(., admin_poly)
+  b[b==0]<-NA
+  
+  bsurf<- sum(values(b),na.rm = TRUE)#raster is already in 100 x 100 m or 1 ha.
+  admin_poly%<>%mutate(BuiltUp_Area_Ha = unlist(bsurf))%>%
+    st_drop_geometry()%>%
+    dplyr::select(c("ADM2CD","BuiltUp_Area_Ha"))
+  
+  return(admin_poly)
 }
 
 
-GetInfra_class_area<-function(iso){
-  library(terra)
-  source("./RCode/AdminBoundaries.R")
-    #Read ADM, transform crs to match Builtup area crs
-  ADM_mweide<-GetUNMaps(iso) %>%
-    dplyr::filter(ISO3CD==iso) %>%
-    dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD) %>%
-    st_transform(crs = "+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") #proj4string mollweide
-  
-  #plot(ADM_mweide["ADM2NM"])
-  
-  adm_weide_l2<-split(ADM_mweide,f=ADM_mweide[["ADM2CD"]])
+GetInfra_area_per_class<-function(admin_poly){
   #---------GHS_BUILT_C_MSZ-------------------------
-  #GHS Settlement Characteristics
-  #https://ghsl.jrc.ec.europa.eu/ghs_buC2022.php
-  #10m resolution
-  #large raster!
+  #GHS Settlement Characteristics from https://ghsl.jrc.ec.europa.eu/ghs_buC2022.php
+  #10m resolution,#large raster!
   #------------------------------------------------
-  #read Built-up_Characteristics raster:
-  builtup_ch<- list.files(path="./Data/Exposure",pattern = "GHS_BUILT_C_.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
-    rast()  #crs(builtup_ch)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
-  
-  #extract values at L2; loop for each L2 polygon + test/check plot(?)
-  #slow!
-  builtUp_l2_class<-list()
-  
-  for(i in seq_along(adm_weide_l2)){
-    bch <- terra::crop(builtup_ch,adm_weide_l2[[i]],mask=TRUE) 
-    bch[bch==0]<-NA  
+  if(nrow(admin_poly)==0){
+    bclass<- NULL
+  }else{
+    r<- list.files(path="./Data/Exposure",pattern = "GHS_BUILT_C_MSZ.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
+      rast()  #crs(builtup_ch)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
+    built_codes<-read.csv("./Data/Exposure/BuiltUpArea/GHS_BUILT_C_codes.csv", header=TRUE, stringsAsFactors = FALSE)
+    #Check projection and make the same:
+    crs1<-st_crs(r)
+    crs2<-st_crs(admin_poly)
     
-    # plot(bch,col = topo.colors(20))
-    # plot(st_geometry(adm_weide_l2[[i]]),add=TRUE)
-    
+    if(!is.na(crs1) && crs1!=crs2){ #make crs2 same as crs1
+      admin_poly<-st_transform(admin_poly, crs=st_crs(r))
+    }
+    #extract values at L2; loop for each L2 polygon + test/check plot(?)
+    bch <- terra::crop(r,admin_poly)%>%
+      terra::mask(., admin_poly)
+    bch[bch==0]<-NA
     #calculate total surface area per built-up characteristic:
-    builtUp_l2_class[[i]] <-bch %>%
-      terra::freq() %>%
-      mutate(built_area_hctre = count*(10*10)*0.0001)%>% #in hectares
+    bclass <-bch %>%
+      terra::freq() %>% #count pixels per value; raster is caterogical so each class
+      mutate(built_area_hctre = count*(10*10)*0.0001)%>% #express value in hectares
       dplyr::select(c(value,built_area_hctre)) %>%
-      rename("built_class_codes" = "value")
+      rename("built_class_codes" = "value") %>%
+      left_join(.,built_codes, by = c("built_class_codes"="Code")) %>%
+      dplyr::select(-built_class_codes)%>%
+      pivot_wider(names_from = GHS_BuiltUp_Description,values_from = built_area_hctre)
   }
- return(builtUp_l2_class)
+  return(bclass)
 }
+
+
+
+
+
 
 #--------------------3.Financial/Economic Assets------------------
 # GDP from Kummu et al 2018
@@ -211,53 +201,27 @@ GetLandCover<-function(ADM,ISO,ext){
 }
 
 
-
-
-
-GetLCover_class_area<-function(iso){
+GetLCover_class_area<-function(admin_poly){
+  #----------------------------------------------------------------------------------------         
+  #Land cover area (in hectares) per class(as is or do we group them further, e.g. group all trees class?)
+  #per admin level 2
+  #------------------------------------------------------------------------------------
   library(ncdf4)
-  #landcover raster:
   file<-list.files(path= "./Data/Exposure/", pattern = "*LCCS",recursive = TRUE,full.names = TRUE)
   lcover<-raster(file,varname="lccs_class")
-  
-  #extract values per level 2:
-  source("./RCode/AdminBoundaries.R")
-  adm_l2<-GetUNMaps(iso)
-  adm_l2_list<-split(adm_l2, f=adm_l2[["ADM2NM"]])
-  lc_adm_l2 <-lapply(adm_l2_list, terra::crop,x=lcover,mask=TRUE)
   #lc_codes
   lc_codes<-read.csv("./Data/Exposure/LandCover/CCI_LC_classes.csv", header=TRUE, stringsAsFactors = FALSE)
   
-  #----------------------------------------------------------------------------------------         
-  #Land cover area (in hectares) per class(grouping too, e.g. group all trees class?)
-  #per admin level 2
-  #------------------------------------------------------------------------------------
-  #shp already in WGS84
-  adm_l2<-GetUNMaps(iso)
-  # plot(adm_l2)
-  # crs(adm_l2)
-  
-  lc_frac<-function(lc_adm){
-    lc_adm_classes<-lc_adm %>%
-     terra::freq() %>%
-      as.data.frame() %>%
-      mutate(lc_area_hctre = count*(300*300)*0.0001)%>% #in hectares
-      dplyr::select(c(value,lc_area_hctre)) %>%
-      rename("lc_codes" = "value")%>%
-      left_join(.,lc_codes, by = c("lc_codes" = "Value")) %>%
-      dplyr::select(-lc_codes)%>%
-      pivot_wider(names_from = LandCover_Description,values_from = lc_area_hctre) 
-      
-  }
-  lc_adm_classes<-lapply(lc_adm_l2, lc_frac)
-    
-  
-  
+  lc_adm_l2 <-terra::crop(lcover,admin_poly) %>%
+    mask(., admin_poly)#mask LC raster to admin unit
+  lc_classes<-lc_adm_l2 %>%
+    terra::freq() %>%
+    as.data.frame() %>%
+    mutate(lc_area_hctre = count*(300*300)*0.0001)%>% #in hectares
+    dplyr::select(c(value,lc_area_hctre)) %>%
+    rename("lc_codes" = "value")%>%
+    left_join(.,lc_codes, by = c("lc_codes" = "Value")) %>%
+    dplyr::select(-lc_codes)%>%
+    pivot_wider(names_from = LandCover_Description,values_from = lc_area_hctre) 
 }
-
-
-a<-GetLCover_class_area("PHL")
-
-
-
 
