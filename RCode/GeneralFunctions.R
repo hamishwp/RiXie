@@ -707,9 +707,9 @@ UNADM_mismatch<-function(UNADM,ADM2, overlap=T, difference=T){#input should be p
   crs2<-st_crs(ADM2)
   
   if(!is.na(crs1) && crs1!=crs2){ #make crs2 same as crs1
-    st_crs(ADM2)<-crs1
+    ADM2<-st_transform(ADM2, crs=st_crs(ADM1))
   }else if(is.na(crs1) && crs1!=crs2){
-    st_crs(ADM1)<-crs2 #make crs1 same as crs2
+    ADM1<-st_transform(ADM1, crs=st_crs(ADM2)) #make crs1 same as crs2
   }
   
   #treat it polygon per polygon:
@@ -754,14 +754,16 @@ UNADM_mismatch<-function(UNADM,ADM2, overlap=T, difference=T){#input should be p
   
   if(overlap == TRUE)
     out<-ovlp %>%
-    setNames(.,"Overlap")
-  
+    setNames(.,"Overlap")%>%
+    do.call(rbind,.)
   if(difference == TRUE)
     out<-diff %>%
-    setNames(.,"Difference")
+    setNames(.,"Difference")%>%
+    do.call(rbind,.)
   if(overlap == TRUE && difference == TRUE)
     out<-list(ovlp,diff) %>%
-    setNames(.,c("Overlap","Difference"))
+    setNames(.,c("Overlap","Difference"))%>%
+    lapply(., function(x)  do.call(rbind,x))
   
   return(out)
 }

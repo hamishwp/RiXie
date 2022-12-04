@@ -64,9 +64,11 @@ GetInfra_area_per_class<-function(admin_poly){
   if(nrow(admin_poly)==0){
     bclass<- NULL
   }else{
-    r<- list.files(path="./Data/Exposure",pattern = "GHS_BUILT_C_MSZ.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
-      rast()  #crs(builtup_ch)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
+    r <- list.files(path="./Data/Exposure",pattern = "GHS_BUILT_C_MSZ.*.\\.tif$",recursive=TRUE,full.names = TRUE) %>%
+      terra::rast()  #crs(builtup_ch)<-CRS("+proj=moll +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs") 
+   
     built_codes<-read.csv("./Data/Exposure/BuiltUpArea/GHS_BUILT_C_codes.csv", header=TRUE, stringsAsFactors = FALSE)
+    
     #Check projection and make the same:
     crs1<-st_crs(r)
     crs2<-st_crs(admin_poly)
@@ -80,7 +82,7 @@ GetInfra_area_per_class<-function(admin_poly){
     bch[bch==0]<-NA
     #calculate total surface area per built-up characteristic:
     bclass <-bch %>%
-      terra::freq() %>% #count pixels per value; raster is caterogical so each class
+      terra::freq() %>% #count pixels per value; raster is categorical so each class
       mutate(built_area_hctre = count*(10*10)*0.0001)%>% #express value in hectares
       dplyr::select(c(value,built_area_hctre)) %>%
       rename("built_class_codes" = "value") %>%
@@ -88,6 +90,10 @@ GetInfra_area_per_class<-function(admin_poly){
       dplyr::select(-built_class_codes)%>%
       pivot_wider(names_from = GHS_BuiltUp_Description,values_from = built_area_hctre)
   }
+  if(nrow(bclass)==0)
+    bclass[1, ] <- NA    # Add empty row containing only NA value
+  bclass%<>%as.data.frame
+  
   return(bclass)
 }
 
