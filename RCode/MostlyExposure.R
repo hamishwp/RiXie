@@ -87,8 +87,8 @@ GetInfra_area_per_class<-function(admin_poly){
       dplyr::select(c(value,built_area_hctre)) %>%
       rename("built_class_codes" = "value") %>%
       left_join(.,built_codes, by = c("built_class_codes"="Code")) %>%
-      dplyr::select(-built_class_codes)%>%
-      pivot_wider(names_from = GHS_BuiltUp_Description,values_from = built_area_hctre)
+      dplyr::select(-c(built_class_codes,GHS_BuiltUp_Description))%>%
+      pivot_wider(names_from = GHS_BuiltUp_Charc_Shortname,values_from = built_area_hctre)
   }
   if(nrow(bclass)==0)
     bclass[1, ] <- NA    # Add empty row containing only NA value
@@ -216,7 +216,8 @@ GetLCover_class_area<-function(admin_poly){
   file<-list.files(path= "./Data/Exposure/", pattern = "*LCCS",recursive = TRUE,full.names = TRUE)
   lcover<-raster(file,varname="lccs_class")
   #lc_codes
-  lc_codes<-read.csv("./Data/Exposure/LandCover/CCI_LC_classes.csv", header=TRUE, stringsAsFactors = FALSE)
+  lc_codes<-read.csv("./Data/Exposure/LandCover/CCI_LC_classes.csv", header=TRUE, stringsAsFactors = FALSE)%>%
+    
   
   lc_adm_l2 <-terra::crop(lcover,admin_poly) %>%
     mask(., admin_poly)#mask LC raster to admin unit
@@ -227,7 +228,7 @@ GetLCover_class_area<-function(admin_poly){
     dplyr::select(c(value,lc_area_hctre)) %>%
     rename("lc_codes" = "value")%>%
     left_join(.,lc_codes, by = c("lc_codes" = "Value")) %>%
-    dplyr::select(-lc_codes)%>%
-    pivot_wider(names_from = LandCover_Description,values_from = lc_area_hctre) 
+    dplyr::select(-c(lc_codes,LandCover_Description))%>%
+    pivot_wider(names_from = Short_name, values_from = lc_area_hctre) 
 }
 
