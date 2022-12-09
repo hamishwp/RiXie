@@ -99,9 +99,9 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",con
   # If nothing happened... FML
   if(any(is.na(checker))) stop("something went wrong in extracting WorldPop data, check year, iso3c & output folder address")
   # Extract the mean hazard intensity from raster
-  popy<-raster(file.path(checker$locy))
+  popy<-terra::rast(file.path(checker$locy))
   # Convert it to how we looove it!
-  popy%>%as("SpatialPixelsDataFrame")
+  #popy%>%as("SpatialPixelsDataFrame")
 }
 
 #------------------------------------------------
@@ -121,24 +121,20 @@ GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
     as("SpatialPixelsDataFrame")
     names(pop@data)[1]<-"POPULATION"
   }
-  # Aggregate the population data to admin level 2
-  popvec<-Grid2ADM(pop,
-                   ADM[ADM@data$ISO3C==ISO,],
-                   sumFn="sum",
-                   index = which(names(pop)=="POPULATION"),
-                   ncores = ncores,
-                   outsiders=outsiders)
-  # Scale to make sure that the value is current
-  factor<-tryCatch(InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor,error=function(e) NA)
-  popvec$all<-popvec$all*ifelse(is.na(factor),1,factor)
-  # Combine into one large data.frame
-  ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
-  return(ADM)
+  # # Aggregate the population data to admin level 2
+  # popvec<-Grid2ADM(pop,
+  #                  ADM[ADM@data$ISO3C==ISO,],
+  #                  sumFn="sum",
+  #                  index = which(names(pop)=="POPULATION"),
+  #                  ncores = ncores,
+  #                  outsiders=outsiders)
+  # # Scale to make sure that the value is current
+  # factor<-tryCatch(InterpPopWB(ISO,Sys.Date(),normdate=as.Date("2015-01-01"))$factor,error=function(e) NA)
+  # popvec$all<-popvec$all*ifelse(is.na(factor),1,factor)
+  # # Combine into one large data.frame
+  # ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
+  # return(ADM)
 }
-
-
-
-
 
 
 
@@ -159,7 +155,53 @@ GetDemog<-function(Dasher,ISO){
 
 
 
+#Demographics from WorldPop
+##----------------Get AgeSex_structure - Constrained UN adjusted data 1km.--------------- 
+#highly simplified code: update later with more function parameters for the urls------
+library(RCurl)
+library(XML)
 
+GetWAgSx_L2<-function(iso,year,folder){
+  
+  base<-paste0("https://data.worldpop.org/GIS/AgeSex_structures/Global_2021_2022_1km_UNadj/constrained/",year)
+  #From url to local dir
+  iso_urls <-paste0(base,"/five_year_age_groups/",toupper(iso),"/")%>%
+    getURL(.,verbose=TRUE,ftp.use.epsv=TRUE, dirlistonly = TRUE) %>%
+    getHTMLLinks(.,xpQuery = "//a/@href[contains(., '.tif')]")
+  
+  #clean folder then download:
+  #f <- list.files(folder, full.names = T)
+  # remove the files
+  #file.remove(f)
+  lapply(iso_urls, function(x) download.file(url=paste0(base,"/five_year_age_groups/",toupper(iso),"/",x),
+                                             destfile = paste0(folder,"/",x), mode="wb"))
+}  
+
+WAgSx2adm<-function(iso,adm_poly,path_to_files){
+  #From local dir to R
+  imgs<-list.files(path=path_to_files,pattern = paste0(".*",tolower(iso),".*\\.tif$"),full.names = TRUE)%>%
+    rast
+  
+  #extract values per ADMl2 unit
+  # sx<-substr(names(imgs),5,5)
+  # age<-sapply(names(imgs), function(x) {as.numeric(strsplit(x, "\\D+")[[1]][-1])%>%
+  #     .[[1]]}) #first number is age
+  # 
+  # cat<-paste0(toupper(sx),age,"pop_UNAdj")
+  #colnames:
+  cat<-str_extract(names(imgs), paste0("(?<=",tolower(iso),"_).*?(?=_1km)"))
+  
+  WagsxL2adm<-imgs %>%
+    terra::crop(.,adm_poly)%>%
+    terra::mask(.,adm_poly) %>%
+    sapply(., function(x) sum(values(x),na.rm=TRUE)) %>%
+    round(.,0)%>%
+    cbind(cat,.) %>%
+    as.data.frame()%>%
+    rename(Count = names(.)[2]) %>%
+    pivot_wider(values_from = Count,names_from = cat)%>%
+    mutate_if(is.character,as.numeric)
+}
 
 
 

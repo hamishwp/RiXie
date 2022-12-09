@@ -59,8 +59,11 @@ GetEarthquakeRisk<-function(ADM,ISO,ext){
 # Tsunami risk dataset
 # Historical tsunamis can be found here: https://www.kaggle.com/datasets/andrewmvd/tsunami-dataset
 # https://preview.grid.unep.ch/index.php?preview=data&events=tsunamis&evcat=2&lang=eng
+# https://www.geonode-gfdrrlab.org/layers/hazard:ts_mih_rp50
+# https://pubs.er.usgs.gov/publication/70196102
+#https://www.earth-prints.org/bitstream/2122/11610/1/2018_Davies_etal_GSL-SP456.5.pdf
+#https://datacatalog.worldbank.org/search/dataset/0040783
 GetTsunamiRisk<-function(ADM,ISO,ext){
-  
   TS<-raster(paste0(dir,"/Data/Hazard/ts_frequency.tif"))
   projection(TS)<-"+proj=longlat +datum=WGS84 +no_defs"
   TS%<>%crop(ext)
@@ -128,6 +131,7 @@ GetExtremeHeat<-function(ADM,ISO,ext){
 
 # Drought - 50 year return period
 # https://www.geonode-gfdrrlab.org/layers/hazard:wci_m3yrcap_current2010_ensmean_pcrglobwb_rp50
+#WCI and indicator for water scarcity
 GetDrought<-function(ADM,ISO=ISO,ext){
   DR<-raster(paste0(dir,"/Data/Hazard/wci_m3yrcap_current2010_ensmean_pcrglobwb_rp50.tif"))
   DR%<>%crop(ext)

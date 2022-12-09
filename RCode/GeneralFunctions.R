@@ -389,9 +389,10 @@ inPoly<-function(poly,pop,iii=1,sumFn="sum",reducer=NULL){
   return(list(vals=outer,indies=Ifin))
 }
 # Aggregate gridded data onto a polygon
+library(parallel)
 Grid2ADM<-function(pop,ADM,sumFn="sum",index=1,ncores=4,outsiders=T)  {
   
-  outer<-mclapply(1:length(ADM@polygons), 
+  outer<-mclapply(1:length(ADM), #sf object
                   function(j) {
                     funcy<-function(cccs,cind,extrF) vapply(1:length(cccs@polygons[[j]]@Polygons),
                                                             function(i) match.fun(extrF)(cccs@polygons[[j]]@Polygons[[i]]@coords[,cind],na.rm=T),
@@ -699,8 +700,7 @@ UNADM_max_overlap<-function(UNADM,ADM2){#input should be per country
 UNADM_mismatch<-function(UNADM,ADM2, overlap=T, difference=T){#input should be per country
   #make both sf objects
   ADM1<- st_as_sf(UNADM)
-  ADM2<- st_as_sf(ADM2)%>%
-    .[!is.na(ADM2$gdlcode),]
+  ADM2<- st_as_sf(ADM2)%>% .[!is.na(ADM2$gdlcode),]
   
   #Check projection and make the same:
   crs1<-st_crs(ADM1)
@@ -752,6 +752,16 @@ UNADM_mismatch<-function(UNADM,ADM2, overlap=T, difference=T){#input should be p
     }
   }
   
+  #replace empty data frame with NA
+  if(nrow(ovlp)==0)
+    ovlp[1, ] <- NA    
+  ovlp%<>%as.data.frame
+  
+  if(nrow(diff)==0)
+    diff[1, ] <- NA    
+  diff%<>%as.data.frame
+  
+  #Rename and output
   if(overlap == TRUE)
     out<-ovlp %>%
     setNames(.,"Overlap")%>%
@@ -768,5 +778,7 @@ UNADM_mismatch<-function(UNADM,ADM2, overlap=T, difference=T){#input should be p
   return(out)
 }
 
+
+#--------Export data as .csv------------
 
 
