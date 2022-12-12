@@ -129,7 +129,7 @@ GetExtremeHeat<-function(ADM,ISO,ext){
   return(ADM)
 }
 
-# Drought - 50 year return period
+# Water scarcity - 50 year return period
 # https://www.geonode-gfdrrlab.org/layers/hazard:wci_m3yrcap_current2010_ensmean_pcrglobwb_rp50
 #WCI and indicator for water scarcity
 GetDrought<-function(ADM,ISO=ISO,ext){
@@ -145,3 +145,6 @@ GetDrought<-function(ADM,ISO=ISO,ext){
 #                 dsn="./Data/MDV_Data_2",
 #                 layer = "map",
 #                 driver = "ESRI Shapefile",overwrite_layer = T)
+
+
+#Drought - 
