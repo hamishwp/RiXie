@@ -5,10 +5,12 @@ source("./RCode/GetPackages.R")
 ncores<-1; if(detectCores()<ncores) stop("You don't have enough CPU threads available, reduce ncores")
 
 # Choose the country you want to work with
-ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Country_Rollout_Timeline.xlsx"),
-                     sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
-  pull(ISO3C.Code)%>%na.omit()
+# ISO<-xlsx::read.xlsx(paste0(dir,"/Data/Tables/Country_Rollout_Timeline.xlsx"),
+#                      sheetName = "Country RIX Start Dates",as.data.frame = T)%>%
+#   pull(ISO3C.Code)%>%na.omit()
 
+ISO<- read.csv("./Data/Tables/2023_country_rollout.csv") %>%
+  pull(ISO3C.Code)%>%na.omit()
 ######################################################################
 ############################ SPATIAL DATA ############################
 ######################################################################
@@ -16,12 +18,12 @@ for (iso3c in unique(ISO)){
   print(paste0("Currently working on ",convIso3Country(iso3c)))
   # ADMIN LEVEL BOUNDARIES
   Dasher<-tryCatch(GetUNMaps(iso3c),error=function(e) NA)
-  if(any(is.na(Dasher)) | nrow(Dasher@data)==0) {
-    print(paste0("Error with ",iso3c," UN Maps"))
-    Dasher<-tryCatch(GetGADM(iso3c),error=function(e) NA)
-    if(any(is.na(Dasher))) {print(paste0("Error with ",iso3c," GADM Maps too!"));next}
-    if(nrow(Dasher@data)==0) {print(paste0("Error with ",iso3c," GADM Maps too!"));next}
-  }
+  # if(any(is.na(Dasher)) | nrow(Dasher@data)==0) {
+  #   print(paste0("Error with ",iso3c," UN Maps"))
+  #   Dasher<-tryCatch(GetGADM(iso3c),error=function(e) NA)
+  #   if(any(is.na(Dasher))) {print(paste0("Error with ",iso3c," GADM Maps too!"));next}
+  #   if(nrow(Dasher@data)==0) {print(paste0("Error with ",iso3c," GADM Maps too!"));next}
+  # }
   Dasher%<>%ADMexceptions()
   # Check if landlocked or not:
   Landlocked<-CheckLandLock(iso3c)
@@ -33,12 +35,13 @@ for (iso3c in unique(ISO)){
   # Population
   Dasher%<>%GetPop(ISO=iso3c,ncores=ncores,outsiders=T)
   # Female, Over 64 & Under 14 population
-  Dasher%<>%GetDemog(ISO=iso3c)
+  Dasher%<>%GetDemog(Pop_totl=Dasher$Population,ISO=iso3c)
   # Forest Cover
   # tmp<-tryCatch(GetLandCover(Dasher,ISO=iso3c,ext=ext),error=function(e) NA)
   # if(!all(is.na(tmp))) Dasher<-tmp
   # GDP-PPP Per Capita
-  Dasher%<>%GetGDP(ISO=iso3c,ext=ext)
+  #Dasher%<>%GetGDP(ISO=iso3c,ext=ext)
+  Dasher%<>%GetGDPv2(ISO=iso3c)
   # Built-up Surface - GHSL
   # Dasher%<>%GetInfra(ISO=iso3c)
   # Healthcare Sites
@@ -100,8 +103,10 @@ for (iso3c in unique(ISO)){
   #@@@@@@@@ VULNERABILITY @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   # Sub-national HDI data
-  tmp<-tryCatch(GetSHDI(Dasher,ISO=iso3c),error=function(e) NA)
+  tmp<-tryCatch(GetSHDIv2(Dasher,ISO=iso3c),error=function(e) NA)
   if(!all(is.na(tmp))) Dasher<-tmp
+  
+}
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
   #@@@@@@@ CLIMATE CHANGE @@@@@@@#
   #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#

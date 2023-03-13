@@ -6,7 +6,7 @@ library(wbstats)
 library(reshape2)
 library(xlsx)
 
-WBcall<-function(indicator,ISO=NULL,syear, fyear){
+WBcall<-function(indicator,ISO=NULL,syear, fyear=syear){
   if(is.null(fyear)) fyear<-syear
   if(is.null(ISO)) ISO<-"countries_only"
   value<-wb_data(indicator = indicator, country=ISO,  mrnev=20,# mrv=10, freq="Y",
@@ -222,7 +222,7 @@ all_indi<-data.frame(wb_indicators())
 
 
 #If pre-defined list of indicator codes exists........
-Wbank_codes_desc<-read.csv("/home/coleen/Documents/GRAF_files/WB_indicators.csv", header=TRUE) %>%
+Wbank_codes_desc<-read.csv(paste0(dir,"/Data/Tables/WB_indicators.csv"), header=TRUE) %>%
   filter(For.country.profile.page..Y.N.=="Y") %>%
   dplyr::select(Variable.API.Name, Indicator.Name) %>%
   mutate(Source = all_indi[match(Variable.API.Name,all_indi$indicator_id),"source"]) #or source_org?
