@@ -46,6 +46,7 @@ GetBuilt_surface<-function(ADM,ISO,ext){ #iso3c code per country, and a polygon 
     ext_tra <- st_transform(st_as_sf(ext), crs=st_crs(r))
   }
   ADM$b<-r%>%crop(ext_tra)%>%
+    terra::mask(ext_tra)%>%
     terra::extract(admin_poly,method='bilinear',fun=sum,na.rm=T,ID=FALSE) %>%
      unlist()
   names(ADM)[names(ADM) == "b"] <- "BuiltUp_Area_Ha"
@@ -53,7 +54,7 @@ GetBuilt_surface<-function(ADM,ISO,ext){ #iso3c code per country, and a polygon 
 }
 
 
-GetBuilt_area_per_class<-function(ADM,ISO){
+GetBuilt_area_per_class<-function(ADM,ISO,ext){
   #---------GHS_BUILT_C_MSZ-------------------------
   #GHS Settlement Characteristics from https://ghsl.jrc.ec.europa.eu/ghs_buC2022.php
   #10m resolution,#large raster!
@@ -78,30 +79,35 @@ GetBuilt_area_per_class<-function(ADM,ISO){
     
     #extract values at L2; loop for each L2 polygon + test/check plot(?)
     if(nrow(ADM)>1){
-      adm_list<-split(admin_poly, f=ADM[["ADM2NMCD"]])
-      r_list <- lapply(adm_list, function(x) terra::crop(r,x))
+      adm_list<-split(admin_poly, f=admin_poly[["ADM2NMCD"]])
+      r_list<- lapply(adm_list, function(x) terra::crop(r,x,mask=TRUE)%>%
+                        terra::mask(.,x))
+      
     }else{
-      r_list<-list(terra::crop(r,ADM))
+      r_list<-list(terra::crop(r,admin_poly,mask=TRUE)%>%
+                     terra::mask(.,x))
     }
     
+    gc()
+
     #calculate total surface area per built-up characteristic:
     BClassXtract<-function(r){
-      r[r==0]<-NA
-      if(!any(is.na(values(r)))){
+      gc()
+      if(!all(is.na(values(r)))){
+        r[r==0]<-NA
         class <-r %>%
-          terra::freq() %>% #count pixels per value; raster is categorical so each class
+          terra::freq() %>%
+          as.data.frame() %>%
           mutate(built_area_hctre = count*(10*10)*0.0001)%>% #express value in hectares
           dplyr::select(c(value,built_area_hctre)) %>%
           rename("built_class_codes" = "value") %>%
           left_join(.,built_codes, by = c("built_class_codes"="Code")) %>%
           dplyr::select(-c(built_class_codes,GHS_BuiltUp_Description))%>%
           pivot_wider(names_from = GHS_Built_Charc_shortname,values_from = built_area_hctre)
-      } else{
-        class <- NA
-      }
-      return(class)
-   
-    }
+        }else{
+          class <- NA
+        }
+    }  
     
     bclass<-lapply(r_list, BClassXtract) 
     #checking for empty lists
