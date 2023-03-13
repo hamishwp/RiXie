@@ -443,6 +443,19 @@ Grid2ADM<-function(pop,ADM,sumFn="sum",index=1,ncores=4,outsiders=T)  {
   return(list(polyonly=vals_s,all=vals,mind=mind))
 }
 
+
+# Aggregate gridded data onto a polygon - version2; using terra::extract function
+Grid2ADM_v2<-function(grid,poly,Fn="sum"){
+  #convert for compatibility
+  svec <- terra::vect(poly)
+  q<-terra::extract(grid,svec,fun=Fn,weights=TRUE,na.rm=TRUE,ID=FALSE) %>%
+    unlist()
+  return(q)
+  
+}
+
+
+
 # Go from one set of admin boundaries to another, using the centroids of one of them
 Poly2poly<-function(polyDF,ADM,SHDI,sumFn=NULL,index=1,ncores=4,outsiders=T){
   # Find the ADM boundaries that lie within GDL boundaries

@@ -110,20 +110,21 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",con
 
 #----------------------GRIDDED WORLDPOP----------------------------
 # Extract population data and put the conflict data onto the grid
-GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
+GetPop<-function(ADM,ISO,constrained=T,ncores=2,outsiders=T,ext){
   # Get the WorldPop data
   if(length(list.files("./Data/Exposure/PopDemo/",ISO))==0){
     pop<-GetWorldPopISO3C(ISO,2020,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T)
     names(pop)[1]<-"POPULATION"
   } else {
-    pop<-raster(paste0("./Data/Exposure/PopDemo/",
-                       list.files("./Data/Exposure/PopDemo/",ISO)))%>%
-    as("SpatialPixelsDataFrame")
-    names(pop@data)[1]<-"POPULATION"
+    pop<-terra::rast(paste0("./Data/Exposure/PopDemo/",
+                       list.files("./Data/Exposure/PopDemo/",ISO)))
+    #%>%
+    # as("SpatialPixelsDataFrame")
+    names(pop)[1]<-"POPULATION"
   }
   # # Aggregate the population data to admin level 2
   # popvec<-Grid2ADM(pop,
-  #                  ADM[ADM@data$ISO3C==ISO,],
+  #                  ADM[ADM@data$ISO3CD==ISO,],
   #                  sumFn="sum",
   #                  index = which(names(pop)=="POPULATION"),
   #                  ncores = ncores,
@@ -133,24 +134,48 @@ GetPop<-function(ISO,ADM,ncores=2,outsiders=T){
   # popvec$all<-popvec$all*ifelse(is.na(factor),1,factor)
   # # Combine into one large data.frame
   # ADM@data%<>%cbind(data.frame(POPULATION=round(popvec$all)))
-  # return(ADM)
+  
+  #VErsion2: Aggregate population values per polygon:
+  # ADM$Population <-Grid2ADM_v2(grid=pop,poly=ADM,Fn= "sum") %>%
+  #   round(., 0) #make whole number
+  pop%<>%terra::crop(ext)
+  y<-pop%>%
+    terra::extract(ADM,method='bilinear',fun=sum,na.rm=T,ID=FALSE)%>%
+    unlist()%>%
+    round(., 0)%>% #make whole number
+    ifelse(is.nan(.) ==TRUE,NA,.)  #NaN to Na
+  
+  
+  ADM<-cbind(ADM,y)
+  names(ADM)[names(ADM) == "y"] <- "Population"
+  
+    return(ADM)
 }
 
 
 
-GetDemog<-function(Dasher,ISO){
-  # Get World Bank data
-  # Gender stats
-  Gend<-WBcall(AsYear(Sys.Date())-1 ,indicator="`SP.POP.TOTL.FE.ZS`",ISO=ISO)
-  Dasher$FemalePop<-round(Dasher$POPULATION*Gend$value[1]/100)
-  # Under14 stats
-  Und14<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.0014.TO.ZS",ISO=ISO)
-  Dasher$Under14Pop<-round(Dasher$POPULATION*Und14$value[1]/100)
-  # Over 64 stats
-  Ovr64<-WBcall(AsYear(Sys.Date())-1 ,indicator="SP.POP.65UP.TO.ZS",ISO=ISO)
-  Dasher$Over64Pop<-round(Dasher$POPULATION*Ovr64$value[1]/100)
+GetDemog<-function(Pop_totl,ADM,ISO){
+  # Get World Bank data: Fem_prop, Und14,Ovr64
+  indic<- c("SP.POP.TOTL.FE.ZS","SP.POP.0014.TO.ZS","SP.POP.65UP.TO.ZS")
+  for(i in 1:4){ #becuase download always failing! repeat them!
+    Pop_stats<-tryCatch(sapply(indic, function(x) WBcall(syear=AsYear(Sys.Date())-1 ,
+                                                         indicator=x,ISO=ISO)[["Value"]]/100 * Pop_totl),
+                        error=function(e) NA)
+    }
   
-  return(Dasher)
+  if(is.matrix(Pop_stats)==TRUE){
+    Pop_stats %<>%
+      as.data.frame()
+  }else{
+    Pop_stats %<>%
+      dplyr::bind_rows() %>%
+      as.data.frame()
+  }
+  
+  colnames(Pop_stats) <-c("Fe_prop","Und14","Ovr64")
+  
+  ADM<-cbind(ADM,Pop_stats)
+  return(ADM)
 }
 
 
@@ -161,8 +186,8 @@ GetDemog<-function(Dasher,ISO){
 library(RCurl)
 library(XML)
 
+#Download data
 GetWAgSx_L2<-function(iso,year,folder){
-  
   base<-paste0("https://data.worldpop.org/GIS/AgeSex_structures/Global_2021_2022_1km_UNadj/constrained/",year)
   #From url to local dir
   iso_urls <-paste0(base,"/five_year_age_groups/",toupper(iso),"/")%>%
@@ -170,17 +195,21 @@ GetWAgSx_L2<-function(iso,year,folder){
     getHTMLLinks(.,xpQuery = "//a/@href[contains(., '.tif')]")
   
   #clean folder then download:
-  #f <- list.files(folder, full.names = T)
-  # remove the files
-  #file.remove(f)
+  f <- list.files(folder, full.names = T)
+  #remove the files
+  file.remove(f)
   lapply(iso_urls, function(x) download.file(url=paste0(base,"/five_year_age_groups/",toupper(iso),"/",x),
                                              destfile = paste0(folder,"/",x), mode="wb"))
 }  
 
-WAgSx2adm<-function(iso,adm_poly,path_to_files){
+#extract values to admin_polygons
+GetAgeSexStruc<-function(ISO,ADM,year,path_to_files){
+  #Download data
+  GetWAgSx_L2(iso=ISO, year=year, folder=path_to_files)
   #From local dir to R
-  imgs<-list.files(path=path_to_files,pattern = paste0(".*",tolower(iso),".*\\.tif$"),full.names = TRUE)%>%
-    rast
+  imgs<-list.files(path=path_to_files,
+                   pattern = paste0(".*",tolower(ISO),".*\\.tif$"),full.names = TRUE)%>%
+    terra::rast()
   
   #extract values per ADMl2 unit
   # sx<-substr(names(imgs),5,5)
@@ -189,19 +218,21 @@ WAgSx2adm<-function(iso,adm_poly,path_to_files){
   # 
   # cat<-paste0(toupper(sx),age,"pop_UNAdj")
   #colnames:
-  cat<-str_extract(names(imgs), paste0("(?<=",tolower(iso),"_).*?(?=_1km)"))
+  cat<-str_extract(names(imgs), paste0("(?<=",tolower(ISO),"_).*?(?=_",year,")"))
   
-  WagsxL2adm<-imgs %>%
-    terra::crop(.,adm_poly)%>%
-    terra::mask(.,adm_poly) %>%
-    sapply(., function(x) sum(values(x),na.rm=TRUE)) %>%
+  imgs %>%
+    terra::crop(.,ADM)
+    
+  AgSx<-imgs%>%terra::extract(ADM,method='bilinear',na.rm=T,fun=sum,ID=FALSE)%>%
     round(.,0)%>%
-    cbind(cat,.) %>%
-    as.data.frame()%>%
-    rename(Count = names(.)[2]) %>%
-    pivot_wider(values_from = Count,names_from = cat)%>%
-    mutate_if(is.character,as.numeric)
-}
+    as.data.frame()
+  
+  colnames(AgSx)<-cat
+  
+  ADM<-cbind(ADM,AgSx)
+  return(ADM)
+
+  }
 
 
 

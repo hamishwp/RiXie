@@ -14,26 +14,32 @@ GetUNMaps<-function(ISO){
   # projection(ADM)<-"+proj=longlat +datum=WGS84 +no_defs"
   ADM <- ADM[ADM$ISO3CD ==ISO, ]
   ADM%<>%dplyr::select(ISO3CD,ADM1NM,ADM2NM,ADM1CD,ADM2CD)
-  # Calculate the area (in kilometres squared) of each admin boundary region
-  # ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
   
-  centroids<-rgeos::gCentroid(as(ADM,"Spatial"),byid=TRUE)
-  ADM$LONGITUDE<-centroids@coords[,1]
-  ADM$LATITUDE<-centroids@coords[,2]
   # In case the admin level 2 boundaries do not exist, but level 1 do!
   if(all(is.na(c(ADM$ADM2NM,ADM$ADM2CD))) & !all(is.na(c(ADM$ADM1NM,ADM$ADM1CD)))) {
     ADM$ADM2NM<-ADM$ADM1NM
     ADM$ADM2CD<-ADM$ADM1CD
+    ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) &
+               !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
   }
   
-  ADM<-ADM[!is.na(ADM$ADM1NM) & !is.na(ADM$ADM2NM) &
-           !is.na(ADM$ADM1CD) & !is.na(ADM$ADM2CD),]
+  #creating a field to deal with duplicates: 
+  ADM$ADM2NMCD<-paste0(ADM$ADM2NM,ADM$ADM2CD,sep="_")
+  
+  #ADD FIELDS:
+  #Calculate the area (in kilometres squared) of each admin boundary region
+  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
+  
+  centroids<-rgeos::gCentroid(as(ADM,"Spatial"),byid=TRUE)
+  ADM$LONGITUDE<-centroids@coords[,1]
+  ADM$LATITUDE<-centroids@coords[,2]
+  
   
   return(ADM)
 }
 
 GetExtent<-function(ADM,expander=NULL){
-  bbox<-ADM@bbox
+  bbox<-sf::st_bbox(ADM)#ADM@bbox
   # Expand the bounding box, useful for the interpolation
   if(!is.null(expander)) bbox%<>%expandBbox(1.1)
   ext<-as(extent(bbox[c(1,3,2,4)]), 'SpatialPolygons')
@@ -52,41 +58,64 @@ CheckLandLock<-function(ISO){
 GetSHDIadmin<-function(ISO){
   ADM<-as(sf::st_read("./Data/AdminBoundaries/GDL_Shapefiles_V6/shdi2022_World_large.shp"),"Spatial")
   ADM <- ADM[!is.na(ADM@data$iso_code) & ADM@data$iso_code ==ISO, ]
-  
   return(ADM)
-  
 }
 
 # Load the administrative boundaries at level 2 from GADM
 GetGADM<-function(ISO){
-  ADM<-gadm_sp_loadCountries(
-    unique(ISO),
-    level = 2,
-    basefile="./Data"
-  )
-  ADM<-ADM$spdf
-  ADM@data%<>%dplyr::select(GID_0,NAME_1,NAME_2,GID_1,GID_2)
-  names(ADM)<-c("ISO3CD","ADM1NM","ADM2NM","ADM1CD","ADM2CD")
+  # ADM<-gadm_sp_loadCountries(
+  #   unique(ISO),
+  #   level = 2,
+  #   basefile="./Data/"
+  # )
+  # ADM<-ADM$spdf
+  # ADM%<>%dplyr::select(GID_0,NAME_1,NAME_2,GID_1,GID_2)
+  gADM<-sf::st_read(paste0(dir,"/Data/AdminBoundaries/gadm_410.gpkg"))
+  geo<-gADM %>%
+    filter(GID_0==ISO) %>%
+    dplyr::select(GID_0 )
+    
+  ADM<-st_drop_geometry(gADM)%>%
+    filter(GID_0==ISO) %>%
+    dplyr::select(NAME_1,NAME_2,GID_1,GID_2)%>%
+    mutate_all(na_if,"") #does not work if used on sf object, so dataframe part is first extracted!
+  
+  ADM<-cbind(geo,ADM)
+    colnames(ADM)<-c("ISO3CD","ADM1NM","ADM2NM","ADM1CD","ADM2CD","geom")
+  # In case the admin level 2 boundaries do not exist, but level 1 do!
+  if(all(is.na(c(ADM$ADM2NM,ADM$ADM2CD))) & !all(is.na(c(ADM$ADM1NM,ADM$ADM1CD)))) {
+    ADM$ADM2NM<-ADM$ADM1NM
+    ADM$ADM2CD<-ADM$ADM1CD
+    print("ADM2CD values not given, replacing them with ADM1CD values instead")
+  }   
+  
+  #creating a field to deal with duplicates: 
+  ADM$ADM2NMCD<-paste0(ADM$ADM2NM,ADM$ADM2CD,sep="_")
+    
+  
   # Calculate the area (in kilometres squared) of each admin boundary region
   ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
-  centroids<-st_coordinates(st_centroid(st_as_sf(ADM)))
+  centroids<-suppressWarnings({st_coordinates(st_centroid(st_as_sf(ADM)))})
   ADM$LONGITUDE<-centroids[,1]
   ADM$LATITUDE<-centroids[,2]
-  ADM@bbox[]<-c(min(ADM$LONGITUDE),
-              min(ADM$LATITUDE),
-              max(ADM$LONGITUDE),
-              max(ADM$LATITUDE))
+  # ADM@bbox[]<-c(min(ADM$LONGITUDE),
+  #             min(ADM$LATITUDE),
+  #             max(ADM$LONGITUDE),
+  #             max(ADM$LATITUDE))
+  
+ 
   return(ADM)
-}
+  }
+
+
+
 
 ADMexceptions<-function(ADM){
-  
   if(ADM$ISO3CD[1]=="ETH"){
     ADM@polygons[[8]]@Polygons[[3]]<-NULL
     ADM@polygons[[8]]@Polygons[[2]]<-NULL
     ADM@polygons[[8]]@plotOrder<-c(1L)
   }
-    
   return(ADM)
 }
 
@@ -131,6 +160,7 @@ filterADM<-function(ADM,iso=NULL,adlev=NULL){
 #   ADM2%<>%merge(SHDI,by="AltName")
 #   
 # }
+
 #---------------------------------------------------------------------
 #data manipulation + analysis on ADM shapefile
 #------------------------------------------------------------
