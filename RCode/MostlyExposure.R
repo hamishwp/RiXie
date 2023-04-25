@@ -85,7 +85,7 @@ GetBuilt_area_per_class<-function(ADM,ISO,ext){
       
     }else{
       r_list<-list(terra::crop(r,admin_poly,mask=TRUE)%>%
-                     terra::mask(.,x))
+                     terra::mask(.,admin_poly))
     }
     
     gc()
