@@ -92,12 +92,19 @@ GetGADM<-function(ISO){
   #creating a field to deal with duplicates: 
   ADM$ADM2NMCD<-paste0(ADM$ADM2NM,ADM$ADM2CD,sep="_")
     
-  
-  # Calculate the area (in kilometres squared) of each admin boundary region
-  ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
-  centroids<-suppressWarnings({st_coordinates(st_centroid(st_as_sf(ADM)))})
-  ADM$LONGITUDE<-centroids[,1]
-  ADM$LATITUDE<-centroids[,2]
+  if(ISO != "FJI"){
+    # Calculate the area (in kilometres squared) of each admin boundary region
+      ADM$AREA_km2<-as.numeric(st_area(st_as_sf(ADM))/1e6)
+      centroids<-suppressWarnings({st_coordinates(st_centroid(st_as_sf(ADM)))})
+      ADM$LONGITUDE<-centroids[,1]
+      ADM$LATITUDE<-centroids[,2]
+  }else{
+    print(paste0(ISO, " has polygons on presented at opposite sides of globe, getting errors for AREA and CENTROID calculations. Setting to NA!"))
+    ADM$AREA<-NA
+    ADM$LONGTIUDE<-NA
+    ADM$LATITUDE<-NA
+  }
+ 
   # ADM@bbox[]<-c(min(ADM$LONGITUDE),
   #             min(ADM$LATITUDE),
   #             max(ADM$LONGITUDE),
@@ -109,7 +116,7 @@ GetGADM<-function(ISO){
 
 
 
-
+#what is this exception for?
 ADMexceptions<-function(ADM){
   if(ADM$ISO3CD[1]=="ETH"){
     ADM@polygons[[8]]@Polygons[[3]]<-NULL

@@ -112,12 +112,12 @@ GetWorldPopISO3C<-function(iso3c,year=NULL,folder="./Data/Exposure/PopDemo/",con
 # Extract population data and put the conflict data onto the grid
 GetPop<-function(ADM,ISO,constrained=T,ncores=2,outsiders=T,ext){
   # Get the WorldPop data
-  if(length(list.files("./Data/Exposure/PopDemo/",ISO))==0){
+  if(length(list.files("./Data/Exposure/PopDemo/",paste0(ISO,"_")))==0){
     pop<-GetWorldPopISO3C(ISO,2020,folder="./Data/Exposure/PopDemo/",constrained=T,kmres=T,unadj=T)
     names(pop)[1]<-"POPULATION"
   } else {
     pop<-terra::rast(paste0("./Data/Exposure/PopDemo/",
-                       list.files("./Data/Exposure/PopDemo/",ISO)))
+                       list.files("./Data/Exposure/PopDemo/",paste0(ISO,"_"))))
     #%>%
     # as("SpatialPixelsDataFrame")
     names(pop)[1]<-"POPULATION"
@@ -194,23 +194,43 @@ GetWAgSx_L2<-function(iso,year,folder){
     getURL(.,verbose=TRUE,ftp.use.epsv=TRUE, dirlistonly = TRUE) %>%
     getHTMLLinks(.,xpQuery = "//a/@href[contains(., '.tif')]")
   
-  #clean folder then download:
-  f <- list.files(folder, full.names = T)
-  #remove the files
-  file.remove(f)
-  lapply(iso_urls, function(x) download.file(url=paste0(base,"/five_year_age_groups/",toupper(iso),"/",x),
-                                             destfile = paste0(folder,"/",x), mode="wb"))
+
+  
+  if(length(list.files(folder))!=42){
+    print("Age_Sex structure .tif images not complete - redownloading from source")
+    #clean folder then download:
+    f <- list.files(folder, full.names = T)
+    #remove the files
+    file.remove(f)
+    lapply(iso_urls, function(x) download.file(url=paste0(base,"/five_year_age_groups/",toupper(iso),"/",x),
+                                               destfile = paste0(folder,"/",x), mode="wb"))
+  }else{
+    print("subdir has the images. no longer downloading from source")
+  }
+  
 }  
 
 #extract values to admin_polygons
-GetAgeSexStruc<-function(ISO,ADM,year,path_to_files){
-  #Download data
-  GetWAgSx_L2(iso=ISO, year=year, folder=path_to_files)
-  #From local dir to R
-  imgs<-list.files(path=path_to_files,
-                   pattern = paste0(".*",tolower(ISO),".*\\.tif$"),full.names = TRUE)%>%
-    terra::rast()
-  
+GetAgeSexStruc<-function(ISO,ADM,year,path_to_files,create_subfolder=T){
+  #check path dir
+   if(create_subfolder == TRUE){
+     subdir<-paste0(path_to_files,"/",ISO,"/")
+     if(dir.exists(subdir)==TRUE){
+       print("Subdirectoy exists, not creating a new one")
+     }else{
+       dir.create(subdir)
+     }
+   }else{
+     if(dir.exists(subdir)==FALSE){
+       print("Subdirectory does not exist, change create_subfolder to TRUE")
+     }
+   }
+  #Download data is needed:
+  GetWAgSx_L2(iso=ISO, year=year, folder=subdir)
+  #Read
+  fil<-list.files(path=subdir,
+                     pattern = paste0(".*",tolower(ISO),".*\\.tif$"),full.names = TRUE)
+  imgs<-terra::rast(fil)
   #extract values per ADMl2 unit
   # sx<-substr(names(imgs),5,5)
   # age<-sapply(names(imgs), function(x) {as.numeric(strsplit(x, "\\D+")[[1]][-1])%>%
@@ -220,8 +240,8 @@ GetAgeSexStruc<-function(ISO,ADM,year,path_to_files){
   #colnames:
   cat<-str_extract(names(imgs), paste0("(?<=",tolower(ISO),"_).*?(?=_",year,")"))
   
-  imgs %>%
-    terra::crop(.,ADM)
+  imgs %<>%terra::crop(ADM)%>%
+    terra::mask(ADM)
     
   AgSx<-imgs%>%terra::extract(ADM,method='bilinear',na.rm=T,fun=sum,ID=FALSE)%>%
     round(.,0)%>%
@@ -229,8 +249,8 @@ GetAgeSexStruc<-function(ISO,ADM,year,path_to_files){
   
   colnames(AgSx)<-cat
   
-  ADM<-cbind(ADM,AgSx)
-  return(ADM)
+  # ADM<-cbind(ADM,AgSx)
+  return(AgSx)
 
   }
 
